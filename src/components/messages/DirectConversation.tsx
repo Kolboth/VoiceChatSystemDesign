@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { MoreHorizontal, Phone, Send } from "lucide-react";
 import type { DirectMessage, UserProfile } from "../../types";
-import { Avatar, PresenceDot, Button, EmptyState, Spinner } from "../ui/primitives";
+import { Avatar, PresenceDot, Button, EmptyState, Spinner, Tooltip } from "../ui/primitives";
 import { useCall } from "../../features/calls/call-context";
 import { useAuth } from "../../features/auth/auth-context";
 import { useSocial } from "../../features/social/social-context";
@@ -17,22 +18,22 @@ function MessageGroup({ messages, senderProfile, isLocal }: {
 }) {
   if (!senderProfile) return null;
   return (
-    <div className="flex gap-3 group hover:bg-[var(--surface-1)]/50 px-4 py-1 rounded-[var(--radius-sm)] transition-colors">
-      <Avatar displayName={senderProfile.displayName} userId={senderProfile.id} size="sm" className="mt-0.5 shrink-0" />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-baseline gap-2 mb-0.5">
-          <span className="text-[13px] font-semibold text-[var(--text-primary)]">
-            {isLocal ? "You" : senderProfile.displayName}
-          </span>
-          <span className="text-[11px] text-[var(--text-tertiary)] tabular-nums">
-            {formatTime(messages[0].createdAt)}
-          </span>
+    <div className="group flex gap-3 px-3 py-2 qp-interactive hover:bg-[var(--surface-1)]/70">
+      <Avatar displayName={senderProfile.displayName} userId={senderProfile.id} avatarUrl={senderProfile.avatarUrl} size="sm" className="mt-0.5 shrink-0" />
+      <div className="min-w-0 flex-1">
+        <div className="mb-0.5 flex items-baseline gap-2">
+          <span className="text-[12px] font-semibold text-[var(--text-primary)]">{isLocal ? "You" : senderProfile.displayName}</span>
+          <span className="tabular-nums text-[10px] text-[var(--text-tertiary)]">{formatTime(messages[0].createdAt)}</span>
         </div>
-        {messages.map(m => (
-          <p key={m.id} className="text-[13px] text-[var(--text-primary)] leading-relaxed break-words">
-            {m.body}
-          </p>
-        ))}
+        <div className="space-y-0.5">
+          {messages.map(m => (
+            <div key={m.id} className="flex items-start gap-2">
+              <p className="min-w-0 flex-1 break-words text-[13px] leading-[1.55] text-[var(--text-primary)]">{m.body}</p>
+              {m.status === "sending" && <span className="mt-0.5 text-[10px] text-[var(--text-tertiary)]">Sending</span>}
+              {m.status === "failed" && <span className="mt-0.5 text-[10px] text-[var(--danger)]">Failed</span>}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -79,48 +80,27 @@ export function DirectConversation({ conversationId, friendId, friendDisplayName
     };
   }
 
-  // Load history
   const loadMessages = useCallback(async () => {
     setLoadingMsgs(true);
-    const { data } = await supabase
-      .from("direct_messages")
-      .select("*")
-      .eq("conversation_id", conversationId)
-      .order("created_at", { ascending: true });
+    const { data } = await supabase.from("direct_messages").select("*").eq("conversation_id", conversationId).order("created_at", { ascending: true });
     setMessages((data ?? []).map(dbToMessage));
     setLoadingMsgs(false);
   }, [conversationId]);
 
   useEffect(() => { loadMessages(); }, [loadMessages]);
 
-  // Realtime subscription
   useEffect(() => {
     const channel = supabase
       .channel(`dm:${conversationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "direct_messages",
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const incoming = dbToMessage(payload.new as Record<string, unknown>);
-          // Don't duplicate messages we already optimistically added
-          setMessages(prev =>
-            prev.some(m => m.id === incoming.id) ? prev : [...prev, incoming]
-          );
-        }
-      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "direct_messages", filter: `conversation_id=eq.${conversationId}` }, payload => {
+        const incoming = dbToMessage(payload.new as Record<string, unknown>);
+        setMessages(prev => prev.some(m => m.id === incoming.id) ? prev : [...prev, incoming]);
+      })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [conversationId]);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
@@ -129,7 +109,6 @@ export function DirectConversation({ conversationId, friendId, friendDisplayName
     setSending(true);
     setInput("");
 
-    // Optimistic insert
     const tempId = `temp_${Date.now()}`;
     const optimistic: DirectMessage = {
       id: tempId,
@@ -141,33 +120,20 @@ export function DirectConversation({ conversationId, friendId, friendDisplayName
     };
     setMessages(prev => [...prev, optimistic]);
 
-    const { data, error } = await supabase.from("direct_messages").insert({
-      conversation_id: conversationId,
-      sender_id: localProfile.id,
-      body,
-    }).select().single();
-
+    const { data, error } = await supabase.from("direct_messages").insert({ conversation_id: conversationId, sender_id: localProfile.id, body }).select().single();
     if (error) {
       setMessages(prev => prev.map(m => m.id === tempId ? { ...m, status: "failed" } : m));
     } else {
-      // Replace optimistic with real row (realtime may also fire; dedup handles it)
-      setMessages(prev =>
-        prev.map(m => m.id === tempId ? dbToMessage(data as Record<string, unknown>) : m)
-      );
+      setMessages(prev => prev.map(m => m.id === tempId ? dbToMessage(data as Record<string, unknown>) : m));
     }
-
     setSending(false);
   }
 
-  // Group consecutive messages by sender
   const groups: Array<{ senderId: string; messages: DirectMessage[] }> = [];
   for (const msg of messages) {
     const last = groups[groups.length - 1];
-    if (last && last.senderId === msg.senderId) {
-      last.messages.push(msg);
-    } else {
-      groups.push({ senderId: msg.senderId, messages: [msg] });
-    }
+    if (last && last.senderId === msg.senderId) last.messages.push(msg);
+    else groups.push({ senderId: msg.senderId, messages: [msg] });
   }
 
   function resolveProfile(senderId: string): { profile: UserProfile | null; isLocal: boolean } {
@@ -176,89 +142,69 @@ export function DirectConversation({ conversationId, friendId, friendDisplayName
     return { profile: null, isLocal: false };
   }
 
-  if (!friend) return (
-    <div className="flex-1 flex items-center justify-center">
-      <p className="text-[13px] text-[var(--text-tertiary)]">Conversation not found.</p>
-    </div>
-  );
+  if (!friend) return <div className="flex flex-1 items-center justify-center"><p className="text-[13px] text-[var(--text-tertiary)]">Conversation not found.</p></div>;
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)] shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Avatar displayName={friend.displayName} userId={friend.id} size="sm" />
-            <div className="absolute -bottom-0.5 -right-0.5">
-              <PresenceDot presence={friend.presence} size={9} />
-            </div>
+    <div className="flex h-full flex-col qp-page-enter">
+      <header className="flex shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--background)]/95 px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="relative shrink-0">
+            <Avatar displayName={friend.displayName} userId={friend.id} avatarUrl={friend.avatarUrl} size="sm" />
+            <div className="absolute -bottom-0.5 -right-0.5"><PresenceDot presence={friend.presence} size={8} /></div>
           </div>
-          <div>
-            <p className="text-[14px] font-semibold text-[var(--text-primary)]">{friend.displayName}</p>
-            <p className="text-[12px] text-[var(--text-tertiary)]">@{friend.username}</p>
+          <div className="min-w-0">
+            <p className="truncate text-[13px] font-semibold text-[var(--text-primary)]">{friend.displayName}</p>
+            <p className="truncate text-[10px] text-[var(--text-tertiary)]">@{friend.username} · {friend.presence === "online" ? "Online" : friend.presence}</p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => startCall(friendId, friend.displayName)}
-          aria-label={`Call ${friend.displayName}`}
-          leadingIcon={
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 2.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.18 6.18l.9-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
-            </svg>
-          }
-        >
-          Call
-        </Button>
-      </div>
 
-      {/* Messages */}
+        <div className="flex items-center gap-1">
+          <Button variant="outline" size="sm" onClick={() => startCall(friendId, friend.displayName)} aria-label={`Call ${friend.displayName}`} leadingIcon={<Phone size={13} />}>
+            Call
+          </Button>
+          <Tooltip label="Conversation options" side="bottom">
+            <button aria-label="Conversation options" className="qp-interactive flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-tertiary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]">
+              <MoreHorizontal size={15} />
+            </button>
+          </Tooltip>
+        </div>
+      </header>
+
       <div className="flex-1 overflow-y-auto py-3">
         {loadingMsgs ? (
-          <div className="flex items-center justify-center h-full">
-            <Spinner size={20} className="text-[var(--text-tertiary)]" />
-          </div>
+          <div className="flex h-full items-center justify-center"><Spinner size={18} className="text-[var(--text-tertiary)]" /></div>
         ) : messages.length === 0 ? (
-          <EmptyState
-            title={`Start a conversation with ${friend.displayName}`}
-            description="Messages are only visible to you and them."
-          />
+          <div className="mx-auto flex h-full max-w-lg items-center justify-center px-5">
+            <EmptyState title={`Start a conversation with ${friend.displayName}`} description="Send a message or start a voice call." />
+          </div>
         ) : (
-          <div className="flex flex-col gap-0.5">
+          <div className="mx-auto flex max-w-3xl flex-col gap-0.5 px-3">
             {groups.map((group, i) => {
               const { profile: senderProfile, isLocal } = resolveProfile(group.senderId);
-              return (
-                <MessageGroup
-                  key={`${group.senderId}-${i}`}
-                  messages={group.messages}
-                  senderProfile={senderProfile}
-                  isLocal={isLocal}
-                />
-              );
+              return <MessageGroup key={`${group.senderId}-${i}`} messages={group.messages} senderProfile={senderProfile} isLocal={isLocal} />;
             })}
           </div>
         )}
         <div ref={bottomRef} />
       </div>
 
-      {/* Composer */}
-      <form onSubmit={handleSend} className="flex items-center gap-2 px-4 py-3 border-t border-[var(--border-subtle)] shrink-0">
-        <input
-          type="text"
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder={`Message ${friend.displayName}`}
-          className="flex-1 h-9 bg-[var(--surface-2)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] px-3 focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] transition-colors"
-          aria-label={`Message ${friend.displayName}`}
-        />
-        <Button type="submit" variant="primary" size="icon" loading={sending} disabled={!input.trim()} aria-label="Send message">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <line x1="22" y1="2" x2="11" y2="13"/>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-          </svg>
-        </Button>
-      </form>
+      <div className="shrink-0 border-t border-[var(--border-subtle)] bg-[var(--surface-0)]/80 px-4 py-3">
+        <form onSubmit={handleSend} className="mx-auto flex max-w-3xl items-end gap-2">
+          <div className="flex min-h-9 flex-1 items-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 transition-colors focus-within:border-[var(--accent)]/70 focus-within:ring-1 focus-within:ring-[var(--accent)]/25">
+            <input
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder={`Message ${friend.displayName}`}
+              className="h-9 w-full bg-transparent text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none"
+              aria-label={`Message ${friend.displayName}`}
+            />
+          </div>
+          <Button type="submit" variant="primary" size="icon" loading={sending} disabled={!input.trim()} aria-label="Send message">
+            <Send size={15} />
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

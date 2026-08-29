@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { VoiceRoomController } from "../../types";
-import { Select, Switch, Slider, Separator, AudioLevelMeter, Button } from "../ui/primitives";
+import { Select, Separator, AudioLevelMeter, Button } from "../ui/primitives";
 
 interface AudioDevicePanelProps {
   voice: VoiceRoomController;
@@ -11,11 +11,6 @@ interface AudioDevicePanelProps {
 
 export function AudioDevicePanel({ voice, anchor, onClose, onOpenFullSettings }: AudioDevicePanelProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const [inputVolume, setInputVolume] = useState(80);
-  const [outputVolume, setOutputVolume] = useState(100);
-  const [echoCancellation, setEchoCancellation] = useState(true);
-  const [noiseSuppression, setNoiseSuppression] = useState(true);
-  const [automaticGain, setAutomaticGain] = useState(true);
   const [level, setLevel] = useState(0);
 
   // Close on outside click / Escape
@@ -75,23 +70,23 @@ export function AudioDevicePanel({ voice, anchor, onClose, onOpenFullSettings }:
   return (
     <div
       ref={ref}
-      className="fixed z-50 w-72 bg-[var(--surface-3)] border border-[var(--border-subtle)] rounded-[var(--radius-xl)] shadow-2xl animate-fade-in overflow-hidden"
+      className="qp-raised qp-panel-enter fixed z-50 w-80 overflow-hidden rounded-[var(--radius-xl)]"
       style={{ bottom: window.innerHeight - anchor.top + 8, left: anchor.left }}
       role="dialog"
       aria-label="Audio device settings"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)]">
+      <div className="flex items-center justify-between border-b border-[var(--border-subtle)] px-3.5 py-3">
         <span className="text-[13px] font-semibold text-[var(--text-primary)]">Audio Devices</span>
         <button onClick={onClose} aria-label="Close" className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
         </button>
       </div>
 
-      <div className="p-4 flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
+      <div className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto p-3.5">
         {/* Microphone section */}
         <div>
-          <div className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Microphone</div>
+          <div className="qp-kicker mb-2">Microphone</div>
           <Select
             value={voice.selectedMicrophoneId ?? "default"}
             onChange={voice.selectMicrophone}
@@ -101,26 +96,16 @@ export function AudioDevicePanel({ voice, anchor, onClose, onOpenFullSettings }:
             <span className="text-[12px] text-[var(--text-secondary)]">Input level</span>
             <AudioLevelMeter level={level} />
           </div>
-          <Slider value={inputVolume} onChange={setInputVolume} label="Input volume" className="mt-2" />
-        </div>
-
-        <Separator />
-
-        {/* Processing */}
-        <div>
-          <div className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-3">Processing</div>
-          <div className="flex flex-col gap-3">
-            <Switch checked={echoCancellation} onChange={setEchoCancellation} label="Echo cancellation" />
-            <Switch checked={noiseSuppression} onChange={setNoiseSuppression} label="Noise suppression" />
-            <Switch checked={automaticGain} onChange={setAutomaticGain} label="Automatic gain control" />
-          </div>
+          <p className="mt-2 text-[11px] text-[var(--text-tertiary)]">
+            Echo cancellation, noise suppression and automatic gain are enabled for live voice.
+          </p>
         </div>
 
         <Separator />
 
         {/* Output section */}
         <div>
-          <div className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-2">Output</div>
+          <div className="qp-kicker mb-2">Output</div>
           {voice.outputSelectionSupported ? (
             <Select
               value={voice.selectedOutputId ?? "default"}
@@ -137,7 +122,6 @@ export function AudioDevicePanel({ voice, anchor, onClose, onOpenFullSettings }:
               </p>
             </>
           )}
-          <Slider value={outputVolume} onChange={setOutputVolume} label="Output volume" className="mt-3" />
         </div>
 
         {/* Open full settings */}

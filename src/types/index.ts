@@ -96,6 +96,16 @@ export interface DirectMessage {
   status: "sending" | "sent" | "failed";
 }
 
+export interface RoomMessage {
+  id: string;
+  roomId: string;
+  senderId: string;
+  body: string;
+  createdAt: string;
+  editedAt?: string;
+  sender?: UserProfile;
+}
+
 export interface DirectMessageService {
   listConversations(): Promise<DirectConversation[]>;
   listMessages(conversationId: string): Promise<DirectMessage[]>;
@@ -107,7 +117,7 @@ export interface DirectMessageService {
 
 // ─── Calls ────────────────────────────────────────────────────────────────────
 
-export type CallStatus = "ringing" | "connected" | "ended" | "declined" | "missed" | "failed";
+export type CallStatus = "ringing" | "accepted" | "connected" | "ended" | "declined" | "missed" | "cancelled" | "failed";
 export type CallState =
   | "idle"
   | "outgoing-ringing"
@@ -118,6 +128,7 @@ export type CallState =
   | "ended"
   | "declined"
   | "missed"
+  | "cancelled"
   | "busy"
   | "failed";
 
@@ -154,6 +165,17 @@ export interface Community {
   iconColor?: string;
   iconInitials?: string;
   ownerId: string;
+  createdAt?: string;
+}
+
+export type CommunityRole = "owner" | "admin" | "member";
+
+export interface CommunityMember {
+  communityId: string;
+  userId: string;
+  role: CommunityRole;
+  joinedAt: string;
+  profile?: UserProfile;
 }
 
 export type RoomKind = "voice" | "text" | "instant";
@@ -168,6 +190,9 @@ export interface Room {
   privacy: RoomPrivacy;
   participantLimit?: number;
   category?: string;
+  createdBy?: string;
+  sortOrder?: number;
+  createdAt?: string;
 }
 
 export type ConnectionQuality = "excellent" | "good" | "poor" | "unknown";
@@ -175,6 +200,10 @@ export type ConnectionQuality = "excellent" | "good" | "poor" | "unknown";
 export interface VoiceParticipant {
   userId: string;
   roomId: string;
+  displayName?: string;
+  username?: string;
+  avatarUrl?: string;
+  audioLevel?: number;
   isLocal: boolean;
   isSpeaking: boolean;
   isMuted: boolean;
@@ -200,10 +229,14 @@ export type VoiceConnectionState =
   | "kicked"
   | "banned";
 
+export type VoiceSessionKind = "community" | "direct";
+
 export interface VoiceRoomController {
   state: VoiceConnectionState;
+  sessionKind?: VoiceSessionKind;
   roomId?: string;
   communityId?: string;
+  directCallId?: string;
   participants: VoiceParticipant[];
   localParticipant?: VoiceParticipant;
   microphoneDevices: MediaDeviceInfo[];
@@ -213,8 +246,12 @@ export interface VoiceRoomController {
   latencyMs?: number;
   activeInputStream: MediaStream | null;
   outputSelectionSupported: boolean;
+  audioPlaybackBlocked: boolean;
+  error?: string;
   joinRoom(roomId: string, communityId?: string): Promise<void>;
+  joinDirectCall(callId: string): Promise<void>;
   leaveRoom(): Promise<void>;
+  enableAudio(): Promise<void>;
   setMuted(value: boolean): Promise<void>;
   setDeafened(value: boolean): Promise<void>;
   selectMicrophone(deviceId: string): Promise<void>;

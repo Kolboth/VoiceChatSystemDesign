@@ -1,225 +1,498 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import type { VoiceRoomController, VoiceParticipant, VoiceConnectionState } from "../../types";
-import { LOCAL_USER_ID } from "../../data/mock";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  ConnectionQuality as LiveKitConnectionQuality,
+  Room,
+  RoomEvent,
+  Track,
+  type Participant,
+  type RemoteTrack,
+} from "livekit-client";
+import type {
+  ConnectionQuality,
+  VoiceConnectionState,
+  VoiceParticipant,
+  VoiceRoomController,
+  VoiceSessionKind,
+} from "../../types";
 import { useAuth } from "../auth/auth-context";
+import { apiFetch } from "../../lib/supabase";
 
 const VoiceContext = createContext<VoiceRoomController | null>(null);
 
 const supportsOutputSink =
-  typeof HTMLAudioElement !== "undefined" &&
-  "setSinkId" in HTMLAudioElement.prototype;
+  typeof HTMLMediaElement !== "undefined" &&
+  "setSinkId" in HTMLMediaElement.prototype;
 
 const FALLBACK_MIC: MediaDeviceInfo = {
-  deviceId: "default", groupId: "default", kind: "audioinput",
-  label: "Default Microphone", toJSON: () => ({}),
-};
-const FALLBACK_OUT: MediaDeviceInfo = {
-  deviceId: "default", groupId: "default", kind: "audiooutput",
-  label: "Default Speaker", toJSON: () => ({}),
+  deviceId: "default",
+  groupId: "default",
+  kind: "audioinput",
+  label: "Default Microphone",
+  toJSON: () => ({}),
 };
 
+const FALLBACK_OUT: MediaDeviceInfo = {
+  deviceId: "default",
+  groupId: "default",
+  kind: "audiooutput",
+  label: "System Default",
+  toJSON: () => ({}),
+};
+
+type VoiceTokenResponse = {
+  token: string;
+  serverUrl: string;
+  roomName: string;
+};
+
+type ParticipantMetadata = {
+  username?: string;
+  avatarUrl?: string | null;
+};
+
+function parseMetadata(value?: string): ParticipantMetadata {
+  if (!value) return {};
+  try {
+    return JSON.parse(value) as ParticipantMetadata;
+  } catch {
+    return {};
+  }
+}
+
+function mapConnectionQuality(value: LiveKitConnectionQuality): ConnectionQuality {
+  if (value === LiveKitConnectionQuality.Excellent) return "excellent";
+  if (value === LiveKitConnectionQuality.Good) return "good";
+  if (value === LiveKitConnectionQuality.Poor) return "poor";
+  return "unknown";
+}
+
+function readableMediaError(error: unknown) {
+  if (error instanceof DOMException) {
+    if (error.name === "NotAllowedError") {
+      return "Microphone access is blocked. Allow microphone access in your browser settings and try again.";
+    }
+    if (error.name === "NotFoundError") return "No microphone was found.";
+    if (error.name === "NotReadableError") {
+      return "The microphone is unavailable or already in use by another application.";
+    }
+  }
+  if (error instanceof Error && error.message) return error.message;
+  return "Voice audio could not be started.";
+}
+
 async function enumerateAudioDevices() {
+  if (!navigator.mediaDevices?.enumerateDevices) {
+    return { inputs: [FALLBACK_MIC], outputs: [FALLBACK_OUT] };
+  }
+
   try {
     const all = await navigator.mediaDevices.enumerateDevices();
+    const inputs = all.filter((d) => d.kind === "audioinput");
+    const outputs = all.filter((d) => d.kind === "audiooutput");
     return {
-      inputs: all.filter(d => d.kind === "audioinput"),
-      outputs: all.filter(d => d.kind === "audiooutput"),
+      inputs: inputs.length ? inputs : [FALLBACK_MIC],
+      outputs: outputs.length ? outputs : [FALLBACK_OUT],
     };
   } catch {
     return { inputs: [FALLBACK_MIC], outputs: [FALLBACK_OUT] };
   }
 }
 
-async function applySinkId(el: HTMLAudioElement, deviceId: string) {
-  if (!supportsOutputSink) return;
-  try {
-    await (el as HTMLAudioElement & { setSinkId(id: string): Promise<void> }).setSinkId(deviceId);
-  } catch {
-    // setSinkId can throw NotAllowedError or NotFoundError; fall back to system default silently
-  }
-}
-
 export function VoiceProvider({ children }: { children: ReactNode }) {
   const { profile } = useAuth();
   const [state, setState] = useState<VoiceConnectionState>("idle");
+  const [sessionKind, setSessionKind] = useState<VoiceSessionKind | undefined>();
   const [roomId, setRoomId] = useState<string | undefined>();
   const [communityId, setCommunityId] = useState<string | undefined>();
+  const [directCallId, setDirectCallId] = useState<string | undefined>();
   const [participants, setParticipants] = useState<VoiceParticipant[]>([]);
-  const [selectedMicrophoneId, setSelectedMicrophoneId] = useState<string>("default");
-  const [selectedOutputId, setSelectedOutputId] = useState<string>("default");
+  const [selectedMicrophoneId, setSelectedMicrophoneId] = useState(
+    () => localStorage.getItem("resonance_preferred_mic") ?? "default",
+  );
+  const [selectedOutputId, setSelectedOutputId] = useState(
+    () => localStorage.getItem("resonance_preferred_output") ?? "default",
+  );
   const [latencyMs, setLatencyMs] = useState<number | undefined>();
   const [microphoneDevices, setMicrophoneDevices] = useState<MediaDeviceInfo[]>([FALLBACK_MIC]);
   const [outputDevices, setOutputDevices] = useState<MediaDeviceInfo[]>([FALLBACK_OUT]);
   const [activeInputStream, setActiveInputStream] = useState<MediaStream | null>(null);
+  const [audioPlaybackBlocked, setAudioPlaybackBlocked] = useState(false);
+  const [error, setError] = useState<string | undefined>();
 
-  const streamRef = useRef<MediaStream | null>(null);
-  const remoteAudioEls = useRef<Set<HTMLAudioElement>>(new Set());
-  const localUserId = profile?.id ?? LOCAL_USER_ID;
+  const roomRef = useRef<Room | null>(null);
+  const currentRoomIdentityRef = useRef<string | undefined>(undefined);
+  const audioContainerRef = useRef<HTMLDivElement | null>(null);
+  const deafenedRef = useRef(false);
+  const intentionalDisconnectRef = useRef(false);
+  const externalAudioEls = useRef<Set<HTMLAudioElement>>(new Set());
 
   const refreshDevices = useCallback(async () => {
     const { inputs, outputs } = await enumerateAudioDevices();
-    if (inputs.length > 0) setMicrophoneDevices(inputs);
-    if (outputs.length > 0) setOutputDevices(outputs);
+    setMicrophoneDevices(inputs);
+    setOutputDevices(outputs);
   }, []);
 
   useEffect(() => {
-    refreshDevices();
+    void refreshDevices();
     if (!navigator.mediaDevices) return;
     navigator.mediaDevices.addEventListener("devicechange", refreshDevices);
     return () => navigator.mediaDevices.removeEventListener("devicechange", refreshDevices);
   }, [refreshDevices]);
 
-  const stopStream = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
-      setActiveInputStream(null);
+  useEffect(() => {
+    if (selectedMicrophoneId === "default") return;
+    if (microphoneDevices.some((device) => device.deviceId === selectedMicrophoneId)) return;
+    setSelectedMicrophoneId("default");
+    localStorage.setItem("resonance_preferred_mic", "default");
+    const room = roomRef.current;
+    if (room) {
+      void room.switchActiveDevice("audioinput", "default").catch(() => false);
+      setError("Your previous microphone is no longer available. Using the system default microphone.");
     }
+  }, [microphoneDevices, selectedMicrophoneId]);
+
+  useEffect(() => {
+    if (selectedOutputId === "default") return;
+    if (outputDevices.some((device) => device.deviceId === selectedOutputId)) return;
+    setSelectedOutputId("default");
+    localStorage.setItem("resonance_preferred_output", "default");
+    const room = roomRef.current;
+    if (room && supportsOutputSink) {
+      void room.switchActiveDevice("audiooutput", "default").catch(() => false);
+      setError("Your previous audio output is no longer available. Using the system default output.");
+    }
+  }, [outputDevices, selectedOutputId]);
+
+  const updateActiveInputStream = useCallback((room: Room | null) => {
+    if (!room) {
+      setActiveInputStream(null);
+      return;
+    }
+    const publication = room.localParticipant.getTrackPublication(Track.Source.Microphone);
+    const mediaTrack = publication?.track?.mediaStreamTrack;
+    setActiveInputStream(mediaTrack ? new MediaStream([mediaTrack]) : null);
   }, []);
+
+  const syncParticipants = useCallback((room: Room | null) => {
+    if (!room) {
+      setParticipants([]);
+      return;
+    }
+
+    const logicalRoomId = currentRoomIdentityRef.current ?? room.name;
+    const all: Participant[] = [
+      room.localParticipant,
+      ...Array.from(room.remoteParticipants.values()),
+    ];
+
+    setParticipants(
+      all.map((participant) => {
+        const metadata = parseMetadata(participant.metadata);
+        const micPublication = participant.getTrackPublication(Track.Source.Microphone);
+        const isLocal = participant === room.localParticipant;
+
+        return {
+          userId: participant.identity,
+          roomId: logicalRoomId,
+          displayName: participant.name || (isLocal ? profile?.displayName : undefined),
+          username: metadata.username,
+          avatarUrl: metadata.avatarUrl ?? undefined,
+          audioLevel: Math.round((participant.audioLevel ?? 0) * 100),
+          isLocal,
+          isSpeaking: participant.isSpeaking,
+          isMuted: !micPublication || micPublication.isMuted,
+          isDeafened: isLocal ? deafenedRef.current : false,
+          isServerMuted: false,
+          hasRaisedHand: false,
+          isModerator: false,
+          isOwner: false,
+          connectionQuality: mapConnectionQuality(participant.connectionQuality),
+          volume: 100,
+          isAFK: false,
+          screenShareActive: Boolean(participant.getTrackPublication(Track.Source.ScreenShare)),
+        } satisfies VoiceParticipant;
+      }),
+    );
+  }, [profile?.displayName]);
+
+  const detachRemoteAudio = useCallback((track: RemoteTrack) => {
+    for (const element of track.detach()) element.remove();
+  }, []);
+
+  const attachRemoteAudio = useCallback((track: RemoteTrack) => {
+    if (track.kind !== Track.Kind.Audio) return;
+    const element = track.attach();
+    if (element instanceof HTMLAudioElement) {
+      element.autoplay = true;
+      element.muted = deafenedRef.current;
+      element.dataset.resonanceRemoteAudio = "true";
+    }
+    audioContainerRef.current?.appendChild(element);
+  }, []);
+
+  const teardownRoom = useCallback(async () => {
+    const room = roomRef.current;
+    roomRef.current = null;
+    currentRoomIdentityRef.current = undefined;
+    if (room) {
+      room.removeAllListeners();
+      await room.disconnect(true).catch(() => undefined);
+    }
+    if (audioContainerRef.current) audioContainerRef.current.replaceChildren();
+    setParticipants([]);
+    setActiveInputStream(null);
+    setAudioPlaybackBlocked(false);
+    setLatencyMs(undefined);
+  }, []);
+
+  const connect = useCallback(async (
+    kind: VoiceSessionKind,
+    identity: string,
+    tokenBody: { kind: "community"; roomId: string } | { kind: "direct"; callId: string },
+    cid?: string,
+  ) => {
+    if (!profile) throw new Error("Authentication required");
+    if (!window.isSecureContext && window.location.hostname !== "localhost") {
+      throw new Error("Voice chat requires HTTPS in production.");
+    }
+
+    intentionalDisconnectRef.current = true;
+    await teardownRoom();
+    intentionalDisconnectRef.current = false;
+
+    setError(undefined);
+    setState("connecting");
+    setSessionKind(kind);
+    setRoomId(kind === "community" ? identity : undefined);
+    setCommunityId(kind === "community" ? cid : undefined);
+    setDirectCallId(kind === "direct" ? identity : undefined);
+    currentRoomIdentityRef.current = identity;
+
+    try {
+      const credentials = await apiFetch<VoiceTokenResponse>("/voice/token", {
+        method: "POST",
+        body: JSON.stringify(tokenBody),
+      });
+
+      const room = new Room({
+        adaptiveStream: true,
+        dynacast: true,
+        audioCaptureDefaults: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+      roomRef.current = room;
+
+      const resync = () => syncParticipants(room);
+      room
+        .on(RoomEvent.ParticipantConnected, resync)
+        .on(RoomEvent.ParticipantDisconnected, resync)
+        .on(RoomEvent.ActiveSpeakersChanged, resync)
+        .on(RoomEvent.TrackMuted, resync)
+        .on(RoomEvent.TrackUnmuted, resync)
+        .on(RoomEvent.ConnectionQualityChanged, resync)
+        .on(RoomEvent.LocalTrackPublished, () => {
+          updateActiveInputStream(room);
+          resync();
+        })
+        .on(RoomEvent.LocalTrackUnpublished, () => {
+          updateActiveInputStream(room);
+          resync();
+        })
+        .on(RoomEvent.TrackSubscribed, (track) => {
+          attachRemoteAudio(track);
+          resync();
+        })
+        .on(RoomEvent.TrackUnsubscribed, (track) => {
+          detachRemoteAudio(track);
+          resync();
+        })
+        .on(RoomEvent.MediaDevicesChanged, () => void refreshDevices())
+        .on(RoomEvent.MediaDevicesError, (mediaError) => {
+          setError(readableMediaError(mediaError));
+          void refreshDevices();
+        })
+        .on(RoomEvent.AudioPlaybackStatusChanged, () => {
+          setAudioPlaybackBlocked(!room.canPlaybackAudio);
+        })
+        .on(RoomEvent.Reconnecting, () => setState("reconnecting"))
+        .on(RoomEvent.Reconnected, () => setState("connected"))
+        .on(RoomEvent.Disconnected, () => {
+          if (!intentionalDisconnectRef.current) setState("disconnected");
+          setParticipants([]);
+          setActiveInputStream(null);
+        });
+
+      await room.connect(credentials.serverUrl, credentials.token, { autoSubscribe: true });
+
+      if (selectedMicrophoneId !== "default") {
+        await room.switchActiveDevice("audioinput", selectedMicrophoneId).catch(() => false);
+      }
+      if (supportsOutputSink && selectedOutputId !== "default") {
+        await room.switchActiveDevice("audiooutput", selectedOutputId).catch(() => false);
+      }
+
+      try {
+        await room.localParticipant.setMicrophoneEnabled(true);
+      } catch (mediaError) {
+        // Listen-only mode is valid. Keep the room connected and surface the mic issue.
+        setError(readableMediaError(mediaError));
+      }
+
+      updateActiveInputStream(room);
+      await refreshDevices();
+      syncParticipants(room);
+      setAudioPlaybackBlocked(!room.canPlaybackAudio);
+      setLatencyMs(undefined);
+      setState("connected");
+
+      // joinRoom/acceptCall originate from a click. This opportunistically satisfies
+      // browser autoplay policy; the UI still exposes enableAudio if it is blocked.
+      await room.startAudio().catch(() => setAudioPlaybackBlocked(true));
+    } catch (connectError) {
+      await teardownRoom();
+      setState("failed");
+      setError(readableMediaError(connectError));
+      throw connectError;
+    }
+  }, [
+    profile,
+    teardownRoom,
+    selectedMicrophoneId,
+    selectedOutputId,
+    refreshDevices,
+    syncParticipants,
+    updateActiveInputStream,
+    attachRemoteAudio,
+    detachRemoteAudio,
+  ]);
 
   const joinRoom = useCallback(async (rid: string, cid?: string) => {
-    // Require secure context for microphone access in production
-    if (!window.isSecureContext && window.location.hostname !== "localhost") {
-      console.warn("[voice] Microphone requires a secure context (HTTPS).");
-    }
+    await connect("community", rid, { kind: "community", roomId: rid }, cid);
+  }, [connect]);
 
-    setState("connecting");
-
-    // Request permission first, then enumerate (so device labels are available)
-    try {
-      stopStream();
-      const constraints: MediaStreamConstraints = {
-        audio: selectedMicrophoneId !== "default"
-          ? { deviceId: { exact: selectedMicrophoneId } }
-          : true,
-      };
-
-      if (!navigator.mediaDevices) throw new Error("MediaDevices API unavailable");
-
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-      setActiveInputStream(stream);
-
-      // Labels are now readable after permission is granted
-      const { inputs, outputs } = await enumerateAudioDevices();
-      if (inputs.length > 0) setMicrophoneDevices(inputs);
-      if (outputs.length > 0) setOutputDevices(outputs);
-    } catch {
-      // No mic — listen-only mode; audio from remote participants still works
-    }
-
-    await new Promise(r => setTimeout(r, 600));
-
-    const localPart: VoiceParticipant = {
-      userId: localUserId,
-      roomId: rid,
-      isLocal: true,
-      isSpeaking: false,
-      isMuted: false,
-      isDeafened: false,
-      isServerMuted: false,
-      hasRaisedHand: false,
-      isModerator: false,
-      isOwner: false,
-      connectionQuality: "excellent",
-      volume: 100,
-      isAFK: false,
-      screenShareActive: false,
-    };
-
-    setParticipants([localPart]);
-    setRoomId(rid);
-    setCommunityId(cid);
-    setLatencyMs(undefined); // latency is not measurable without a real transport
-    setState("connected");
-  }, [localUserId, selectedMicrophoneId, stopStream]);
+  const joinDirectCall = useCallback(async (callId: string) => {
+    await connect("direct", callId, { kind: "direct", callId });
+  }, [connect]);
 
   const leaveRoom = useCallback(async () => {
+    if (state === "idle") return;
     setState("disconnecting");
-    stopStream();
-    await new Promise(r => setTimeout(r, 200));
-    setParticipants([]);
+    intentionalDisconnectRef.current = true;
+    await teardownRoom();
+    intentionalDisconnectRef.current = false;
+    setSessionKind(undefined);
     setRoomId(undefined);
     setCommunityId(undefined);
-    setLatencyMs(undefined);
+    setDirectCallId(undefined);
+    setError(undefined);
     setState("idle");
-  }, [stopStream]);
+  }, [state, teardownRoom]);
 
   const setMuted = useCallback(async (value: boolean) => {
-    // Mute the actual MediaStream track so audio is not transmitted
-    if (streamRef.current) {
-      streamRef.current.getAudioTracks().forEach(t => { t.enabled = !value; });
+    const room = roomRef.current;
+    if (!room) return;
+    try {
+      if (!value && selectedMicrophoneId !== "default") {
+        await room.switchActiveDevice("audioinput", selectedMicrophoneId).catch(() => false);
+      }
+      await room.localParticipant.setMicrophoneEnabled(!value);
+      updateActiveInputStream(room);
+      syncParticipants(room);
+    } catch (mediaError) {
+      setError(readableMediaError(mediaError));
+      throw mediaError;
     }
-    setParticipants(prev => prev.map(p =>
-      p.isLocal ? { ...p, isMuted: value, isSpeaking: value ? false : p.isSpeaking } : p
-    ));
-  }, []);
+  }, [selectedMicrophoneId, syncParticipants, updateActiveInputStream]);
 
   const setDeafened = useCallback(async (value: boolean) => {
-    setParticipants(prev => prev.map(p =>
-      p.isLocal ? { ...p, isDeafened: value } : p
-    ));
-  }, []);
+    deafenedRef.current = value;
+    if (audioContainerRef.current) {
+      audioContainerRef.current.querySelectorAll("audio").forEach((element) => {
+        element.muted = value;
+      });
+    }
+    externalAudioEls.current.forEach((element) => { element.muted = value; });
+    syncParticipants(roomRef.current);
+  }, [syncParticipants]);
 
   const selectMicrophone = useCallback(async (deviceId: string) => {
-    setSelectedMicrophoneId(deviceId);
-    if (streamRef.current) {
-      // Hot-swap: stop existing tracks, acquire new device
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
-      setActiveInputStream(null);
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: deviceId !== "default" ? { deviceId: { exact: deviceId } } : true,
-        });
-        streamRef.current = stream;
-        setActiveInputStream(stream);
-        // Re-apply mute state to the new track
-        setParticipants(prev => {
-          const local = prev.find(p => p.isLocal);
-          if (local?.isMuted) stream.getAudioTracks().forEach(t => { t.enabled = false; });
-          return prev;
-        });
-      } catch {
-        streamRef.current = null;
+    const room = roomRef.current;
+    if (room) {
+      const switched = await room.switchActiveDevice("audioinput", deviceId).catch(() => false);
+      if (!switched && deviceId !== "default") {
+        throw new Error("The selected microphone could not be activated.");
       }
     }
-  }, []);
+    setSelectedMicrophoneId(deviceId);
+    localStorage.setItem("resonance_preferred_mic", deviceId);
+    if (room) {
+      updateActiveInputStream(room);
+      syncParticipants(room);
+    }
+  }, [syncParticipants, updateActiveInputStream]);
 
   const selectOutput = useCallback(async (deviceId: string) => {
-    setSelectedOutputId(deviceId);
     if (!supportsOutputSink) return;
-    // Apply new sink to every registered remote audio element
-    const tasks = Array.from(remoteAudioEls.current).map(el => applySinkId(el, deviceId));
-    await Promise.all(tasks);
+    const room = roomRef.current;
+    if (room) {
+      const switched = await room.switchActiveDevice("audiooutput", deviceId).catch(() => false);
+      if (!switched && deviceId !== "default") {
+        throw new Error("The selected audio output could not be activated.");
+      }
+    }
+    setSelectedOutputId(deviceId);
+    localStorage.setItem("resonance_preferred_output", deviceId);
   }, []);
 
-  const registerRemoteAudio = useCallback((el: HTMLAudioElement) => {
-    remoteAudioEls.current.add(el);
-    // Apply current output preference immediately
-    if (supportsOutputSink && selectedOutputId !== "default") {
-      applySinkId(el, selectedOutputId);
-    }
-  }, [selectedOutputId]);
+  const enableAudio = useCallback(async () => {
+    const room = roomRef.current;
+    if (!room) return;
+    await room.startAudio();
+    setAudioPlaybackBlocked(!room.canPlaybackAudio);
+  }, []);
 
-  const unregisterRemoteAudio = useCallback((el: HTMLAudioElement) => {
-    remoteAudioEls.current.delete(el);
+  const registerRemoteAudio = useCallback((element: HTMLAudioElement) => {
+    externalAudioEls.current.add(element);
+    element.muted = deafenedRef.current;
+  }, []);
+
+  const unregisterRemoteAudio = useCallback((element: HTMLAudioElement) => {
+    externalAudioEls.current.delete(element);
   }, []);
 
   const raiseHand = useCallback(async (value: boolean) => {
-    setParticipants(prev => prev.map(p =>
-      p.isLocal ? { ...p, hasRaisedHand: value } : p
+    // Raised-hand sync will move to participant attributes in the UI modernization
+    // phase. Keep local state useful without faking remote state.
+    setParticipants((current) => current.map((participant) =>
+      participant.isLocal ? { ...participant, hasRaisedHand: value } : participant,
     ));
   }, []);
 
-  useEffect(() => () => { stopStream(); }, [stopStream]);
+  useEffect(() => () => {
+    intentionalDisconnectRef.current = true;
+    void teardownRoom();
+  }, [teardownRoom]);
 
-  const localParticipant = participants.find(p => p.isLocal);
+  const localParticipant = participants.find((participant) => participant.isLocal);
 
-  const ctrl: VoiceRoomController = {
+  const controller = useMemo<VoiceRoomController>(() => ({
     state,
+    sessionKind,
     roomId,
     communityId,
+    directCallId,
     participants,
     localParticipant,
     microphoneDevices,
@@ -229,8 +502,12 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     latencyMs,
     activeInputStream,
     outputSelectionSupported: supportsOutputSink,
+    audioPlaybackBlocked,
+    error,
     joinRoom,
+    joinDirectCall,
     leaveRoom,
+    enableAudio,
     setMuted,
     setDeafened,
     selectMicrophone,
@@ -239,13 +516,46 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     refreshDevices,
     registerRemoteAudio,
     unregisterRemoteAudio,
-  };
+  }), [
+    state,
+    sessionKind,
+    roomId,
+    communityId,
+    directCallId,
+    participants,
+    localParticipant,
+    microphoneDevices,
+    outputDevices,
+    selectedMicrophoneId,
+    selectedOutputId,
+    latencyMs,
+    activeInputStream,
+    audioPlaybackBlocked,
+    error,
+    joinRoom,
+    joinDirectCall,
+    leaveRoom,
+    enableAudio,
+    setMuted,
+    setDeafened,
+    selectMicrophone,
+    selectOutput,
+    raiseHand,
+    refreshDevices,
+    registerRemoteAudio,
+    unregisterRemoteAudio,
+  ]);
 
-  return <VoiceContext.Provider value={ctrl}>{children}</VoiceContext.Provider>;
+  return (
+    <VoiceContext.Provider value={controller}>
+      {children}
+      <div ref={audioContainerRef} className="hidden" aria-hidden="true" />
+    </VoiceContext.Provider>
+  );
 }
 
 export function useVoice(): VoiceRoomController {
-  const ctx = useContext(VoiceContext);
-  if (!ctx) throw new Error("useVoice must be used within VoiceProvider");
-  return ctx;
+  const context = useContext(VoiceContext);
+  if (!context) throw new Error("useVoice must be used within VoiceProvider");
+  return context;
 }

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { UserSettings, Theme } from "../../types";
 import { useAuth } from "../../features/auth/auth-context";
 import { useVoice } from "../../features/voice/voice-context";
-import { Button, Input, Switch, Slider, Select, Separator, Textarea, AudioLevelMeter } from "../ui/primitives";
+import { Button, Input, Switch, Select, Separator, Textarea, AudioLevelMeter } from "../ui/primitives";
 
 const DEFAULT_SETTINGS: UserSettings = {
   theme: "dark",
@@ -37,7 +37,7 @@ function SettingRow({ label, description, children }: { label: string; descripti
 function SettingSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-6">
-      <h3 className="text-[12px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider mb-1">{title}</h3>
+      <h3 className="qp-kicker mb-1.5">{title}</h3>
       <div className="divide-y divide-[var(--border-subtle)]">{children}</div>
     </div>
   );
@@ -60,7 +60,7 @@ function AccountSettings() {
 
   return (
     <div>
-      <h2 className="text-[18px] font-semibold text-[var(--text-primary)] mb-6">Account</h2>
+      <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[var(--text-primary)] mb-6">Account</h2>
       <SettingSection title="Profile">
         <div className="py-4 flex flex-col gap-4">
           <Input label="Display name" value={displayName} onChange={e => setDisplayName(e.target.value)} />
@@ -231,7 +231,7 @@ function VoiceAudioSettings() {
 
   return (
     <div>
-      <h2 className="text-[18px] font-semibold text-[var(--text-primary)] mb-6">Voice & Audio</h2>
+      <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[var(--text-primary)] mb-6">Voice & Audio</h2>
 
       {/* Permission banner */}
       {needsPermission && (
@@ -272,34 +272,13 @@ function VoiceAudioSettings() {
         <SettingRow label="Input level">
           <AudioLevelMeter level={audioLevel} />
         </SettingRow>
-        <div className="py-3">
-          <Slider label="Input volume" value={settings.inputVolume} onChange={v => set("inputVolume", v)} />
-        </div>
-        <SettingRow label="Input mode">
-          <div className="flex gap-2">
-            {(["voice-activity", "push-to-talk"] as const).map(mode => (
-              <button
-                key={mode}
-                onClick={() => set("inputMode", mode)}
-                className={`px-3 py-1 text-[13px] rounded-[var(--radius-sm)] border transition-colors ${settings.inputMode === mode ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent)]/10" : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]"}`}
-              >
-                {mode === "voice-activity" ? "Voice activity" : "Push to talk"}
-              </button>
-            ))}
-          </div>
-        </SettingRow>
       </SettingSection>
 
       <SettingSection title="Processing">
-        <SettingRow label="Echo cancellation">
-          <Switch checked={settings.echoCancellation} onChange={v => set("echoCancellation", v)} />
-        </SettingRow>
-        <SettingRow label="Noise suppression" description="Filters background noise from your microphone">
-          <Switch checked={settings.noiseSuppression} onChange={v => set("noiseSuppression", v)} />
-        </SettingRow>
-        <SettingRow label="Automatic gain control">
-          <Switch checked={settings.automaticGain} onChange={v => set("automaticGain", v)} />
-        </SettingRow>
+        <div className="py-3">
+          <p className="text-[13px] font-medium text-[var(--text-primary)]">Automatic voice processing</p>
+          <p className="text-[12px] text-[var(--text-tertiary)] mt-0.5">Echo cancellation, noise suppression and automatic gain are enabled for live voice.</p>
+        </div>
       </SettingSection>
 
       <SettingSection title="Output">
@@ -320,9 +299,6 @@ function VoiceAudioSettings() {
             Output device selection is managed by your browser or system on this device.
           </p>
         )}
-        <div className="py-3">
-          <Slider label="Output volume" value={settings.outputVolume} onChange={v => set("outputVolume", v)} />
-        </div>
         <div className="py-3">
           <Button variant="outline" size="sm" onClick={testOutput}>Test output</Button>
         </div>
@@ -364,14 +340,14 @@ function AppearanceSettings({ theme, onThemeChange }: { theme: Theme; onThemeCha
 
   return (
     <div>
-      <h2 className="text-[18px] font-semibold text-[var(--text-primary)] mb-6">Appearance</h2>
+      <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[var(--text-primary)] mb-6">Appearance</h2>
       <SettingSection title="Theme">
         <div className="py-3 flex gap-2">
           {(["dark", "light", "system"] as Theme[]).map(t => (
             <button
               key={t}
               onClick={() => onThemeChange(t)}
-              className={`px-4 py-2 text-[13px] rounded-[var(--radius-md)] border capitalize transition-colors ${theme === t ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent)]/10 font-medium" : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]"}`}
+              className={`qp-interactive px-3 py-1.5 text-[12px] rounded-[var(--radius-md)] border capitalize ${theme === t ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent)]/10 font-medium" : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]"}`}
             >
               {t}
             </button>
@@ -382,7 +358,7 @@ function AppearanceSettings({ theme, onThemeChange }: { theme: Theme; onThemeCha
         <SettingRow label="UI density" description="Controls spacing and padding throughout the interface">
           <div className="flex gap-2">
             {(["comfortable", "compact"] as const).map(d => (
-              <button key={d} onClick={() => setDensity(d)} className={`px-3 py-1 text-[13px] rounded-[var(--radius-sm)] border capitalize transition-colors ${density === d ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent)]/10" : "border-[var(--border-subtle)] text-[var(--text-secondary)]"}`}>{d}</button>
+              <button key={d} onClick={() => setDensity(d)} className={`qp-interactive px-2.5 py-1 text-[12px] rounded-[var(--radius-sm)] border capitalize ${density === d ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent)]/10" : "border-[var(--border-subtle)] text-[var(--text-secondary)]"}`}>{d}</button>
             ))}
           </div>
         </SettingRow>
@@ -401,7 +377,7 @@ function PrivacySettings() {
 
   return (
     <div>
-      <h2 className="text-[18px] font-semibold text-[var(--text-primary)] mb-6">Privacy</h2>
+      <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[var(--text-primary)] mb-6">Privacy</h2>
       <SettingSection title="Social">
         <SettingRow label="Friend requests" description="Who can send you friend requests">
           <Select value={settings.friendRequestsFrom} onChange={v => set("friendRequestsFrom", v as any)} options={[{ value: "everyone", label: "Everyone" }, { value: "nobody", label: "Nobody" }]} className="w-40" />
@@ -428,7 +404,7 @@ function NotificationsSettings() {
 
   return (
     <div>
-      <h2 className="text-[18px] font-semibold text-[var(--text-primary)] mb-6">Notifications</h2>
+      <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[var(--text-primary)] mb-6">Notifications</h2>
       <SettingSection title="In-app">
         <SettingRow label="Mentions">
           <Switch checked={mentions} onChange={setMentions} />
@@ -455,7 +431,7 @@ interface SettingsProps {
 
 export function Settings({ page = "account", theme, onThemeChange }: SettingsProps) {
   return (
-    <div className="flex-1 overflow-y-auto px-8 py-6 max-w-2xl">
+    <div className="flex-1 overflow-y-auto px-6 py-6 sm:px-8 max-w-3xl qp-page-enter">
       {page === "account" && <AccountSettings />}
       {page === "voice-audio" && <VoiceAudioSettings />}
       {page === "appearance" && <AppearanceSettings theme={theme} onThemeChange={onThemeChange} />}

@@ -14,7 +14,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: "bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] disabled:opacity-50",
+  primary: "bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] shadow-[inset_0_1px_rgba(255,255,255,0.08)] disabled:opacity-50",
   secondary: "bg-[var(--surface-2)] text-[var(--text-primary)] hover:bg-[var(--surface-3)] border border-[var(--border-subtle)]",
   ghost: "text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]",
   outline: "border border-[var(--border-strong)] text-[var(--text-primary)] hover:bg-[var(--surface-2)]",
@@ -34,7 +34,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     <button
       ref={ref}
       disabled={disabled || loading}
-      className={`inline-flex items-center font-medium transition-colors duration-100 cursor-pointer select-none disabled:cursor-not-allowed ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`qp-interactive inline-flex items-center font-medium cursor-pointer select-none disabled:cursor-not-allowed ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       {...props}
     >
       {loading ? <Spinner size={14} /> : leadingIcon}
@@ -89,7 +89,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             ref={ref}
             id={inputId}
-            className={`w-full h-8 bg-[var(--surface-2)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] px-3 transition-colors focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] ${leadingIcon ? "pl-8" : ""} ${trailingElement ? "pr-8" : ""} ${error ? "border-[var(--danger)]" : ""} ${className}`}
+            className={`w-full h-8 bg-[var(--surface-2)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] px-3 transition-colors focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/25 ${leadingIcon ? "pl-8" : ""} ${trailingElement ? "pr-8" : ""} ${error ? "border-[var(--danger)]" : ""} ${className}`}
             {...props}
           />
           {trailingElement && (
@@ -119,7 +119,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         <textarea
           ref={ref}
           id={inputId}
-          className={`w-full bg-[var(--surface-2)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] text-sm text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] px-3 py-2 transition-colors focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] resize-none ${error ? "border-[var(--danger)]" : ""} ${className}`}
+          className={`w-full bg-[var(--surface-2)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] text-[13px] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] px-3 py-2 transition-colors focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)]/25 resize-none ${error ? "border-[var(--danger)]" : ""} ${className}`}
           {...props}
         />
         {error && <p className="text-xs text-[var(--danger)]">{error}</p>}
@@ -273,7 +273,7 @@ export function Select({ value, onChange, options, label, className = "" }: Sele
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="h-8 w-full bg-[var(--surface-2)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] text-sm text-[var(--text-primary)] px-2.5 focus:outline-none focus:border-[var(--accent)] cursor-pointer"
+        className="h-8 w-full bg-[var(--surface-2)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] text-[13px] text-[var(--text-primary)] px-2.5 focus:outline-none focus:border-[var(--accent)] cursor-pointer"
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>

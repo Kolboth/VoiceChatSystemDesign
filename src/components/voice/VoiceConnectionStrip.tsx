@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { VoiceRoomController } from "../../types";
-import { getCommunityById, getRoomById } from "../../data/mock";
+import { useCommunities } from "../../features/communities/community-context";
 import { Button, Tooltip, Spinner } from "../ui/primitives";
 import { AudioDevicePanel } from "./AudioDevicePanel";
 
@@ -10,6 +10,7 @@ interface VoiceConnectionStripProps {
 
 export function VoiceConnectionStrip({ voice }: VoiceConnectionStripProps) {
   const [devicePanelOpen, setDevicePanelOpen] = useState(false);
+  const { getCommunityById, getRoomById } = useCommunities();
   const [anchorPos, setAnchorPos] = useState<{ top: number; left: number } | null>(null);
 
   const { state, roomId, communityId, localParticipant, latencyMs } = voice;
@@ -36,11 +37,12 @@ export function VoiceConnectionStrip({ voice }: VoiceConnectionStripProps) {
     failed: "var(--danger)",
   };
 
+  if (voice.sessionKind === "direct") return null;
   if (state === "idle" || state === "disconnected" || state === "disconnecting") return null;
 
   return (
     <>
-      <div className="flex items-center gap-4 px-3 py-2 bg-[var(--surface-1)] border-t border-[var(--border-subtle)] shrink-0">
+      <div className="flex shrink-0 items-center gap-4 border-t border-[var(--border-subtle)] bg-[var(--surface-0)] px-3 py-2">
         {/* Status + room info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
@@ -54,7 +56,7 @@ export function VoiceConnectionStrip({ voice }: VoiceConnectionStripProps) {
               />
             )}
             <span
-              className="text-[11px] font-semibold uppercase tracking-widest"
+              className="text-[10px] font-semibold uppercase tracking-[.11em]"
               style={{ color: stateColors[state] ?? "var(--text-secondary)" }}
             >
               {state === "connected" ? "Voice connected" :
@@ -64,7 +66,7 @@ export function VoiceConnectionStrip({ voice }: VoiceConnectionStripProps) {
             </span>
           </div>
           {room && (
-            <div className="flex items-center gap-1 text-[12px] text-[var(--text-secondary)] truncate">
+            <div className="flex items-center gap-1 text-[11px] text-[var(--text-secondary)] truncate">
               <span className="font-medium text-[var(--text-primary)] truncate">{room.name}</span>
               {community && <><span className="text-[var(--text-tertiary)]">·</span><span className="truncate">{community.name}</span></>}
             </div>
@@ -73,6 +75,17 @@ export function VoiceConnectionStrip({ voice }: VoiceConnectionStripProps) {
             <div className="text-[11px] text-[var(--text-tertiary)] tabular-nums">{latencyMs} ms · {qualityLabel}</div>
           )}
         </div>
+
+        {(voice.audioPlaybackBlocked || voice.error) && (
+          <div className="hidden md:flex items-center gap-2 max-w-sm">
+            {voice.error && (
+              <span className="text-[11px] text-[var(--danger)] truncate" title={voice.error}>{voice.error}</span>
+            )}
+            {voice.audioPlaybackBlocked && (
+              <Button variant="outline" size="sm" onClick={() => voice.enableAudio()}>Enable audio</Button>
+            )}
+          </div>
+        )}
 
         {/* Controls */}
         <div className="flex items-center gap-1 shrink-0">
@@ -127,7 +140,7 @@ export function VoiceConnectionStrip({ voice }: VoiceConnectionStripProps) {
             <button
               aria-label="Open audio device settings"
               onClick={openDevicePanel}
-              className="flex items-center justify-center w-8 h-8 rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] transition-colors"
+              className="qp-interactive flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
@@ -142,7 +155,7 @@ export function VoiceConnectionStrip({ voice }: VoiceConnectionStripProps) {
             <button
               aria-label="Leave voice room"
               onClick={() => voice.leaveRoom()}
-              className="flex items-center justify-center w-8 h-8 rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:bg-[var(--danger)]/15 hover:text-[var(--danger)] transition-colors"
+              className="qp-interactive flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-secondary)] hover:bg-[var(--danger)]/10 hover:text-[var(--danger)]"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>

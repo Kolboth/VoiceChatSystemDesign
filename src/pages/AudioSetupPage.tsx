@@ -186,14 +186,14 @@ export function AudioSetupPage() {
   const selectedOutputLabel = outputDevices.find(d => d.deviceId === selectedOutputId)?.label || "Default Speaker";
 
   return (
-    <div className="flex h-full items-center justify-center bg-[var(--background)] p-6">
-      <div className="w-full max-w-md">
+    <div className="flex h-full items-center justify-center bg-[var(--background)] p-6 qp-page-enter">
+      <div className="w-full max-w-[460px]">
         {/* Progress bar */}
-        <div className="flex items-center gap-1.5 mb-10">
+        <div className="mb-8 flex items-center gap-1">
           {steps.map((s, i) => (
             <div
               key={s}
-              className={`h-[3px] flex-1 rounded-full transition-all duration-300 ${i <= stepIndex ? "bg-[var(--accent)]" : "bg-[var(--surface-3)]"}`}
+              className={`h-0.5 flex-1 rounded-full transition-all duration-300 ${i <= stepIndex ? "bg-[var(--accent)]" : "bg-[var(--surface-3)]"}`}
             />
           ))}
         </div>
@@ -202,11 +202,11 @@ export function AudioSetupPage() {
         {step === "permission" && (
           <div className="flex flex-col gap-6">
             <div className="flex items-start gap-4">
-              <div className="w-11 h-11 rounded-[var(--radius-md)] bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent)] shrink-0 mt-0.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--accent)]/[0.07] text-[var(--accent)] mt-0.5">
                 <MicIcon size={20} />
               </div>
               <div>
-                <h2 className="text-[22px] font-semibold text-[var(--text-primary)] mb-1.5">Microphone access</h2>
+                <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[var(--text-primary)] mb-1.5">Microphone access</h2>
                 <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
                   {APP_NAME} needs microphone access to let you speak in voice rooms and calls. Your microphone is only active when you're connected to a room.
                 </p>
@@ -245,11 +245,11 @@ export function AudioSetupPage() {
         {step === "microphone" && (
           <div className="flex flex-col gap-6">
             <div className="flex items-start gap-4">
-              <div className="w-11 h-11 rounded-[var(--radius-md)] bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent)] shrink-0 mt-0.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--accent)]/[0.07] text-[var(--accent)] mt-0.5">
                 <MicIcon size={20} />
               </div>
               <div>
-                <h2 className="text-[22px] font-semibold text-[var(--text-primary)] mb-1.5">Choose microphone</h2>
+                <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[var(--text-primary)] mb-1.5">Choose microphone</h2>
                 <p className="text-[13px] text-[var(--text-secondary)]">Select the microphone you want to use.</p>
               </div>
             </div>
@@ -258,7 +258,7 @@ export function AudioSetupPage() {
               {micDevices.length > 0 ? micDevices.map(device => (
                 <label
                   key={device.deviceId}
-                  className={`flex items-center gap-3 p-3 rounded-[var(--radius-md)] border cursor-pointer transition-colors ${
+                  className={`flex items-center gap-3 p-3 rounded-[var(--radius-md)] border cursor-pointer qp-interactive ${
                     selectedMicId === device.deviceId
                       ? "border-[var(--accent)] bg-[var(--accent)]/5"
                       : "border-[var(--border-subtle)] hover:border-[var(--border-strong)]"
@@ -300,11 +300,11 @@ export function AudioSetupPage() {
         {step === "output" && (
           <div className="flex flex-col gap-6">
             <div className="flex items-start gap-4">
-              <div className="w-11 h-11 rounded-[var(--radius-md)] bg-[var(--accent)]/10 flex items-center justify-center text-[var(--accent)] shrink-0 mt-0.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--accent)]/[0.07] text-[var(--accent)] mt-0.5">
                 <SpeakerIcon size={20} />
               </div>
               <div>
-                <h2 className="text-[22px] font-semibold text-[var(--text-primary)] mb-1.5">Choose output</h2>
+                <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[var(--text-primary)] mb-1.5">Choose output</h2>
                 <p className="text-[13px] text-[var(--text-secondary)]">Select where you want to hear others.</p>
               </div>
             </div>
@@ -313,7 +313,7 @@ export function AudioSetupPage() {
               {outputDevices.length > 0 ? outputDevices.map(device => (
                 <label
                   key={device.deviceId}
-                  className={`flex items-center gap-3 p-3 rounded-[var(--radius-md)] border cursor-pointer transition-colors ${
+                  className={`flex items-center gap-3 p-3 rounded-[var(--radius-md)] border cursor-pointer qp-interactive ${
                     selectedOutputId === device.deviceId
                       ? "border-[var(--accent)] bg-[var(--accent)]/5"
                       : "border-[var(--border-subtle)] hover:border-[var(--border-strong)]"
@@ -350,7 +350,7 @@ export function AudioSetupPage() {
         {step === "input-mode" && (
           <div className="flex flex-col gap-6">
             <div>
-              <h2 className="text-[22px] font-semibold text-[var(--text-primary)] mb-1.5">Input mode</h2>
+              <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[var(--text-primary)] mb-1.5">Input mode</h2>
               <p className="text-[13px] text-[var(--text-secondary)]">How should your microphone activate?</p>
             </div>
 

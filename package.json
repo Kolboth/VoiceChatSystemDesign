@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
-    "lucide-react": "^1.37.0",
-    "peerjs": "^1.5.5",
+    "livekit-client": "^2.22.1",
+    "lucide-react": "0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },

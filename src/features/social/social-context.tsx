@@ -99,6 +99,15 @@ export function SocialProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`social:${user.id}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "friend_requests" }, refresh)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user, refresh]);
+
   const searchUsers = useCallback(async (query: string): Promise<UserProfile[]> => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
@@ -188,46 +197,12 @@ export function SocialProvider({ children }: { children: ReactNode }) {
   }, [user, refresh]);
 
   const getOrCreateConversation = useCallback(async (friendId: string): Promise<string> => {
-    // Find existing conversation shared with friendId
-    const { data: myConvs } = await supabase
-      .from("conversation_members")
-      .select("conversation_id")
-      .eq("user_id", user!.id);
-
-    const myIds = (myConvs ?? []).map((r: { conversation_id: string }) => r.conversation_id);
-
-    if (myIds.length > 0) {
-      const { data: shared } = await supabase
-        .from("conversation_members")
-        .select("conversation_id")
-        .eq("user_id", friendId)
-        .in("conversation_id", myIds);
-
-      if (shared && shared.length > 0) {
-        return (shared[0] as { conversation_id: string }).conversation_id;
-      }
-    }
-
-    // Create a new conversation
-    const { data: conv, error: convErr } = await supabase
-      .from("direct_conversations")
-      .insert({})
-      .select("id")
-      .single();
-    if (convErr) throw convErr;
-
-    const conversationId = (conv as { id: string }).id;
-
-    // Insert both members
-    const { error: memberErr } = await supabase
-      .from("conversation_members")
-      .insert([
-        { conversation_id: conversationId, user_id: user!.id },
-        { conversation_id: conversationId, user_id: friendId },
-      ]);
-    if (memberErr) throw memberErr;
-
-    return conversationId;
+    if (!user) throw new Error("Authentication required");
+    const { data, error } = await supabase.rpc("create_direct_conversation", {
+      p_other_user_id: friendId,
+    });
+    if (error) throw error;
+    return data as string;
   }, [user]);
 
   return (

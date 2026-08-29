@@ -1,5 +1,6 @@
+import { Headphones, Hand, MicOff, MoonStar, ShieldCheck } from "lucide-react";
 import type { VoiceParticipant } from "../../types";
-import { getUserById } from "../../data/mock";
+import { useCommunities } from "../../features/communities/community-context";
 import { Avatar, ConnectionQualityIcon, Tooltip } from "../ui/primitives";
 
 interface ParticipantTileProps {
@@ -8,126 +9,140 @@ interface ParticipantTileProps {
   compact?: boolean;
 }
 
+function SpeakingBars() {
+  return (
+    <span className="voice-bars text-[var(--live)]" aria-hidden="true">
+      <span /><span /><span />
+    </span>
+  );
+}
+
 export function ParticipantTile({ participant, onContextMenu, compact = false }: ParticipantTileProps) {
-  const user = getUserById(participant.userId);
-  if (!user) return null;
+  const { getProfileById } = useCommunities();
+  const cachedUser = getProfileById(participant.userId);
+  const user = cachedUser ?? {
+    id: participant.userId,
+    displayName: participant.displayName ?? "Participant",
+    avatarUrl: participant.avatarUrl,
+  };
 
-  const { isSpeaking, isMuted, isDeafened, isServerMuted, hasRaisedHand, isLocal, isModerator, connectionQuality, isAFK } = participant;
+  const {
+    isSpeaking,
+    isMuted,
+    isDeafened,
+    isServerMuted,
+    hasRaisedHand,
+    isLocal,
+    isModerator,
+    connectionQuality,
+    isAFK,
+  } = participant;
 
-  const name = isLocal ? "You" : user.displayName;
   const effectiveMuted = isMuted || isServerMuted;
   const speakingActive = isSpeaking && !effectiveMuted;
+  const displayName = user.displayName;
 
   if (compact) {
     return (
       <div
-        className={`group flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-md)] transition-colors hover:bg-[var(--surface-2)] ${speakingActive ? "ring-1 ring-[var(--live)]/60" : ""}`}
+        className={`qp-participant-enter group flex min-h-10 items-center gap-2.5 rounded-[var(--radius-md)] border px-2.5 py-1.5 qp-interactive ${
+          speakingActive
+            ? "border-[var(--live)]/35 bg-[var(--live)]/[0.045]"
+            : "border-transparent hover:border-[var(--border-subtle)] hover:bg-[var(--surface-2)]"
+        }`}
         onContextMenu={e => { e.preventDefault(); onContextMenu?.(participant, e); }}
+        aria-label={`${isLocal ? `${displayName}, you` : displayName}${speakingActive ? ", speaking" : ""}${effectiveMuted ? ", muted" : ""}`}
       >
-        <div className="relative">
-          <Avatar displayName={user.displayName} userId={user.id} size="sm" />
-          {speakingActive && (
-            <span className="absolute -inset-0.5 rounded-full ring-2 ring-[var(--live)] animate-[speaking-pulse_1.2s_ease-in-out_infinite]" />
-          )}
+        <div className="relative shrink-0">
+          <Avatar displayName={displayName} userId={user.id} avatarUrl={user.avatarUrl} size="sm" />
+          {speakingActive && <span className="absolute -inset-[3px] rounded-full border border-[var(--live)]/65" aria-hidden="true" />}
         </div>
-        <span className={`flex-1 text-[13px] truncate ${speakingActive ? "text-[var(--text-primary)] font-medium" : "text-[var(--text-secondary)]"}`}>
-          {name}
-        </span>
-        <div className="flex items-center gap-1.5">
-          {hasRaisedHand && <span title="Hand raised" className="text-[var(--warning)]">✋</span>}
-          {isServerMuted && (
-            <Tooltip label="Server muted" side="top">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" strokeWidth="2" strokeLinecap="round">
-                <line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23M12 19v4M8 23h8"/>
-              </svg>
-            </Tooltip>
-          )}
-          {!isServerMuted && isMuted && (
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2" strokeLinecap="round">
-              <line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23M12 19v4M8 23h8"/>
-            </svg>
-          )}
+
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className={`truncate text-[13px] ${speakingActive ? "font-medium text-[var(--text-primary)]" : "text-[var(--text-secondary)]"}`}>
+              {displayName}
+            </span>
+            {isLocal && <span className="text-[10px] font-medium uppercase tracking-[.08em] text-[var(--text-tertiary)]">You</span>}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2 text-[var(--text-tertiary)]">
+          {speakingActive && <SpeakingBars />}
+          {hasRaisedHand && <Hand size={13} className="text-[var(--warning)]" aria-label="Hand raised" />}
+          {isServerMuted ? (
+            <Tooltip label="Server muted" side="top"><MicOff size={13} className="text-[var(--danger)]" /></Tooltip>
+          ) : isMuted ? (
+            <Tooltip label="Muted" side="top"><MicOff size={13} /></Tooltip>
+          ) : null}
+          {isDeafened && <Tooltip label="Deafened" side="top"><Headphones size={13} /></Tooltip>}
+          <ConnectionQualityIcon quality={connectionQuality} />
         </div>
       </div>
     );
   }
 
-  // Full tile
   return (
     <div
-      className={`group relative flex flex-col items-center gap-3 p-4 rounded-[var(--radius-lg)] border transition-all duration-150 select-none cursor-default
-        ${speakingActive
-          ? "bg-[var(--surface-2)] border-[var(--live)]/60 shadow-[0_0_0_2px_var(--live)]/20"
-          : "bg-[var(--surface-1)] border-[var(--border-subtle)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)]"
-        }`}
+      className={`qp-participant-enter group relative min-w-0 rounded-[var(--radius-lg)] border p-3.5 qp-interactive ${
+        speakingActive
+          ? "border-[var(--live)]/42 bg-[var(--live)]/[0.045] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--live)_12%,transparent)]"
+          : "border-[var(--border-subtle)] bg-[var(--surface-1)] hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)]"
+      }`}
       onContextMenu={e => { e.preventDefault(); onContextMenu?.(participant, e); }}
-      aria-label={`${name}${speakingActive ? ", speaking" : ""}${effectiveMuted ? ", muted" : ""}${isDeafened ? ", deafened" : ""}`}
+      aria-label={`${displayName}${isLocal ? ", you" : ""}${speakingActive ? ", speaking" : ""}${effectiveMuted ? ", muted" : ""}${isDeafened ? ", deafened" : ""}`}
     >
-      {/* Speaking ring */}
-      <div className="relative">
-        <Avatar displayName={user.displayName} userId={user.id} size="lg" />
-        {speakingActive && (
-          <span
-            className="absolute -inset-1.5 rounded-full border-2 border-[var(--live)] animate-[speaking-pulse_1.4s_ease-in-out_infinite]"
-            aria-hidden="true"
-          />
-        )}
-        {isAFK && (
-          <span className="absolute -bottom-1 -right-1 text-sm" title="AFK">💤</span>
-        )}
-      </div>
+      <div className="flex items-start gap-3">
+        <div className="relative shrink-0">
+          <Avatar displayName={displayName} userId={user.id} avatarUrl={user.avatarUrl} size="lg" />
+          {speakingActive && (
+            <span className="absolute -inset-[4px] rounded-full border-[1.5px] border-[var(--live)]/75" aria-hidden="true" />
+          )}
+          {isAFK && (
+            <span className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[var(--surface-3)] text-[var(--text-tertiary)] ring-2 ring-[var(--surface-1)]" title="AFK">
+              <MoonStar size={9} />
+            </span>
+          )}
+        </div>
 
-      {/* Name */}
-      <div className="flex flex-col items-center gap-0.5 min-w-0 w-full">
-        <span className={`text-[13px] font-medium truncate max-w-full ${speakingActive ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]"}`}>
-          {name}
-        </span>
-        {isLocal && (
-          <span className="text-[11px] text-[var(--text-tertiary)]">You</span>
-        )}
-      </div>
+        <div className="min-w-0 flex-1 pt-0.5">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className={`truncate text-[13px] font-medium ${speakingActive ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]"}`}>
+              {displayName}
+            </span>
+            {isLocal && (
+              <span className="rounded-[3px] bg-[var(--surface-3)] px-1 py-0.5 text-[9px] font-semibold uppercase tracking-[.08em] text-[var(--text-tertiary)]">
+                You
+              </span>
+            )}
+          </div>
+          <div className="mt-1 flex items-center gap-2 text-[11px] text-[var(--text-tertiary)]">
+            {speakingActive ? (
+              <span className="flex items-center gap-1.5 font-medium text-[var(--live)]"><SpeakingBars /> Speaking</span>
+            ) : effectiveMuted ? (
+              <span>{isServerMuted ? "Moderator muted" : "Muted"}</span>
+            ) : (
+              <span>Listening</span>
+            )}
+          </div>
+        </div>
 
-      {/* Status row */}
-      <div className="flex items-center gap-2">
-        {hasRaisedHand && (
-          <Tooltip label="Hand raised" side="top">
-            <span className="text-sm text-[var(--warning)]" aria-label="Hand raised">✋</span>
-          </Tooltip>
-        )}
-        {isModerator && (
-          <Tooltip label="Moderator" side="top">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            </svg>
-          </Tooltip>
-        )}
-        {isServerMuted ? (
-          <Tooltip label="Server muted" side="top">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" strokeWidth="2" strokeLinecap="round" aria-label="Server muted">
-              <line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23M12 19v4M8 23h8"/>
-            </svg>
-          </Tooltip>
-        ) : isMuted ? (
-          <Tooltip label="Muted" side="top">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2" strokeLinecap="round" aria-label="Muted">
-              <line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23M12 19v4M8 23h8"/>
-            </svg>
-          </Tooltip>
-        ) : null}
-        {isDeafened && (
-          <Tooltip label="Deafened" side="top">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" strokeWidth="2" strokeLinecap="round" aria-label="Deafened">
-              <path d="M11 5h2a2 2 0 0 1 0 4h-3m0 0H7a2 2 0 0 1 0-4"/><path d="M5 14H4a9 9 0 0 0 16 0h-1"/>
-            </svg>
-          </Tooltip>
-        )}
-        <ConnectionQualityIcon quality={connectionQuality} />
+        <div className="flex shrink-0 items-center gap-1.5 text-[var(--text-tertiary)]">
+          {hasRaisedHand && <Tooltip label="Hand raised" side="top"><Hand size={13} className="text-[var(--warning)]" /></Tooltip>}
+          {isModerator && <Tooltip label="Moderator" side="top"><ShieldCheck size={13} className="text-[var(--accent)]" /></Tooltip>}
+          {isServerMuted ? (
+            <Tooltip label="Server muted" side="top"><MicOff size={13} className="text-[var(--danger)]" /></Tooltip>
+          ) : isMuted ? (
+            <Tooltip label="Muted" side="top"><MicOff size={13} /></Tooltip>
+          ) : null}
+          {isDeafened && <Tooltip label="Deafened" side="top"><Headphones size={13} /></Tooltip>}
+          <ConnectionQualityIcon quality={connectionQuality} />
+        </div>
       </div>
     </div>
   );
 }
 
-// Compact row for large rooms
 export function ParticipantCompactRow({ participant, onContextMenu }: {
   participant: VoiceParticipant;
   onContextMenu?: (p: VoiceParticipant, e: React.MouseEvent) => void;
