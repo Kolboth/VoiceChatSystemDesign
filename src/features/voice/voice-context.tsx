@@ -9,7 +9,10 @@ import {
   type ReactNode,
 } from "react";
 import {
+  ConnectionError,
+  ConnectionErrorReason,
   ConnectionQuality as LiveKitConnectionQuality,
+  MediaDeviceFailure,
   Room,
   RoomEvent,
   Track,
@@ -76,6 +79,27 @@ function mapConnectionQuality(value: LiveKitConnectionQuality): ConnectionQualit
 }
 
 function readableMediaError(error: unknown) {
+  if (error instanceof ConnectionError) {
+    const status = error.status ? ` (HTTP ${error.status})` : "";
+    switch (error.reason) {
+      case ConnectionErrorReason.NotAllowed:
+        return `LiveKit rejected the access token${status}. Check that the API key and secret belong to this project.`;
+      case ConnectionErrorReason.ServerUnreachable:
+        return `The LiveKit server could not be reached${status}.`;
+      case ConnectionErrorReason.Timeout:
+        return "The LiveKit connection timed out.";
+      case ConnectionErrorReason.WebSocket:
+        return `The LiveKit WebSocket connection failed${status}${error.context ? `: ${error.context}` : "."}`;
+      case ConnectionErrorReason.ServiceNotFound:
+        return `LiveKit service not found: ${error.context}.`;
+      default:
+        return `${error.reasonName}${status}${error.context ? `: ${String(error.context)}` : ""}`;
+    }
+  }
+  const deviceFailure = MediaDeviceFailure.getFailure(error);
+  if (deviceFailure === MediaDeviceFailure.PermissionDenied) return "Microphone access is blocked. Allow it in your browser and try again.";
+  if (deviceFailure === MediaDeviceFailure.NotFound) return "No microphone was found.";
+  if (deviceFailure === MediaDeviceFailure.DeviceInUse) return "The microphone is already in use by another application.";
   if (error instanceof DOMException) {
     if (error.name === "NotAllowedError") {
       return "Microphone access is blocked. Allow microphone access in your browser settings and try again.";
@@ -85,13 +109,13 @@ function readableMediaError(error: unknown) {
       return "The microphone is unavailable or already in use by another application.";
     }
   }
-  if (error instanceof Error && error.message) return error.message;
+  if (error instanceof Error && error.message && error.message !== "Error") return error.message;
   if (typeof error === "string" && error.trim()) return error;
   if (error && typeof error === "object") {
     const detail = error as Record<string, unknown>;
-    for (const key of ["message", "reason", "name", "code"]) {
+    for (const key of ["reasonName", "context", "status", "reason", "code", "message", "name"]) {
       const value = detail[key];
-      if (typeof value === "string" && value.trim()) return value;
+      if (typeof value === "string" && value.trim() && value !== "Error") return value;
       if (typeof value === "number") return `Voice connection failed (${value}).`;
     }
     try {
