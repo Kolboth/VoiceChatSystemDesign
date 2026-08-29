@@ -18,7 +18,7 @@ app.use(
   }),
 );
 
-app.get("/make-server-3cb311ed/health", (c) => c.json({ status: "ok" }));
+app.get("/server/make-server-3cb311ed/health", (c) => c.json({ status: "ok" }));
 
 type TokenRequest =
   | { kind: "community"; roomId: string }
@@ -45,7 +45,7 @@ async function authenticatedUser(authorization: string | undefined) {
   return data.user;
 }
 
-app.post("/make-server-3cb311ed/voice/token", async (c) => {
+app.post("/server/make-server-3cb311ed/voice/token", async (c) => {
   try {
     const authorization = c.req.header("Authorization");
     const user = await authenticatedUser(authorization);
