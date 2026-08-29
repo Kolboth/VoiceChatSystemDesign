@@ -46,7 +46,15 @@ async function ensureProfile(userId: string): Promise<UserProfile | null> {
     audio_setup_complete: false,
   }).select().maybeSingle();
 
-  return (data && !error) ? toProfile(data as Record<string, unknown>) : null;
+  if (error) {
+    // 23505 = unique_violation: a concurrent call already inserted the row
+    if ((error as { code?: string }).code === "23505") {
+      return fetchProfile(userId);
+    }
+    console.error("ensureProfile insert failed:", error);
+    return null;
+  }
+  return data ? toProfile(data as Record<string, unknown>) : null;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -56,31 +64,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Restore any existing session on mount
-    supabase.auth.getSession().then(async ({ data }) => {
-      const s = data.session;
-      if (s?.user) {
-        setUser({ id: s.user.id, email: s.user.email! });
-        const p = await ensureProfile(s.user.id);
-        setProfile(p);
-        setStatus("authenticated");
-      } else {
-        setStatus("unauthenticated");
-      }
-    });
-
-    // Sync with every auth state change (sign-in, sign-out, token refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    // onAuthStateChange is the single source of truth for auth state.
+    // It fires immediately with INITIAL_SESSION on mount (covering page refreshes),
+    // and again on every sign-in / sign-out / token refresh.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         setUser({ id: session.user.id, email: session.user.email! });
         const p = await ensureProfile(session.user.id);
-        setProfile(p);
-        setStatus("authenticated");
+        if (p) {
+          setProfile(p);
+          setStatus("authenticated");
+        } else {
+          // Session valid but profile missing/unrecoverable — sign out cleanly
+          // so the user can try again rather than getting stuck in a loading loop.
+          setError("Account setup incomplete. Please sign up again.");
+          await supabase.auth.signOut();
+          setUser(null);
+          setProfile(null);
+          setStatus("unauthenticated");
+        }
       } else {
         setUser(null);
         setProfile(null);
         setStatus("unauthenticated");
       }
+    });
+
+    // Fallback: if onAuthStateChange never fires (no stored session and no network),
+    // ensure we don't stay in "loading" forever.
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) setStatus(s => s === "loading" ? "unauthenticated" : s);
     });
 
     return () => subscription.unsubscribe();
@@ -139,25 +152,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("no_user");
       }
 
-      if (data.session) {
-        // Email confirmation is disabled — session is live, create profile now
-        const p = await ensureProfile(data.user.id);
-        setProfile(p);
-        setUser({ id: data.user.id, email: data.user.email! });
-        setStatus("authenticated");
-      } else {
-        // Email confirmation is required — tell the caller so the UI can prompt
+      if (!data.session) {
+        // Email confirmation is required — tell the caller so the UI can show a message
         throw Object.assign(new Error("email_confirmation_required"), {
           code: "email_confirmation_required",
         });
       }
+      // Session live: onAuthStateChange fires and handles profile creation + state updates
     },
 
     async signIn({ email, password }) {
       setError(null);
       const { error: err } = await supabase.auth.signInWithPassword({ email, password });
       if (err) {
-        setError("Invalid email or password.");
+        const msg = err.message ?? "";
+        if (msg.toLowerCase().includes("not confirmed") || msg.toLowerCase().includes("email confirm")) {
+          setError("Your email isn't confirmed yet. Check your inbox, or sign up again with a new email address.");
+        } else if (msg.toLowerCase().includes("invalid") || msg.toLowerCase().includes("credentials")) {
+          setError("Invalid email or password.");
+        } else {
+          setError(msg || "Sign in failed. Please try again.");
+        }
         throw err;
       }
       // onAuthStateChange handles the rest
