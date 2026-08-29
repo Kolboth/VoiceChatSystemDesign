@@ -34,14 +34,19 @@ function LoadingShell() {
 
 // ─── DB setup screen ──────────────────────────────────────────────────────────
 
+const SQL_EDITOR_URL = "https://supabase.com/dashboard/project/qzsxinzoxbaoerjvyzei/sql/new";
+
 function DbSetupScreen({ sql }: { sql: string }) {
   const [copied, setCopied] = useState(false);
-  function copySQL() {
+
+  function copyAndOpen() {
     navigator.clipboard.writeText(sql.trim()).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      setTimeout(() => setCopied(false), 3000);
     });
+    window.open(SQL_EDITOR_URL, "_blank");
   }
+
   return (
     <div className="flex h-full items-center justify-center bg-[var(--background)] p-6">
       <div className="w-full max-w-lg">
@@ -51,23 +56,40 @@ function DbSetupScreen({ sql }: { sql: string }) {
             <path d="M3 12c0 1.66 4.03 3 9 3s9-1.34 9-3"/>
           </svg>
         </div>
-        <h2 className="text-[22px] font-semibold text-[var(--text-primary)] mb-2">Database setup required</h2>
+        <h2 className="text-[22px] font-semibold text-[var(--text-primary)] mb-2">One-time database setup</h2>
         <p className="text-[13px] text-[var(--text-secondary)] mb-5 leading-relaxed">
-          Run the SQL below once in your <strong className="text-[var(--text-primary)]">Supabase → SQL Editor</strong> to create the tables and policies this app needs.
+          Click the button below — it copies the SQL and opens your Supabase SQL Editor. Paste and click <strong className="text-[var(--text-primary)]">Run</strong>, then reload this page.
         </p>
-        <div className="relative">
-          <pre className="bg-[var(--surface-2)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] p-4 text-[11px] text-[var(--text-secondary)] font-mono overflow-auto max-h-64 whitespace-pre-wrap leading-relaxed">
+
+        <button
+          onClick={copyAndOpen}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-white text-[14px] font-semibold hover:opacity-90 transition-opacity mb-5"
+        >
+          {copied ? (
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6 9 17l-5-5"/></svg>
+              SQL copied — paste in the editor that just opened
+            </>
+          ) : (
+            <>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy SQL &amp; Open Supabase Editor
+            </>
+          )}
+        </button>
+
+        <details className="group">
+          <summary className="text-[12px] text-[var(--text-tertiary)] cursor-pointer hover:text-[var(--text-secondary)] list-none flex items-center gap-1.5">
+            <svg className="group-open:rotate-90 transition-transform" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>
+            View SQL
+          </summary>
+          <pre className="mt-3 bg-[var(--surface-2)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] p-4 text-[11px] text-[var(--text-secondary)] font-mono overflow-auto max-h-64 whitespace-pre-wrap leading-relaxed">
             {sql.trim()}
           </pre>
-          <button
-            onClick={copySQL}
-            className="absolute top-3 right-3 px-2.5 py-1 text-[11px] font-medium rounded-[var(--radius-sm)] bg-[var(--surface-3)] border border-[var(--border-subtle)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-          >
-            {copied ? "Copied!" : "Copy"}
-          </button>
-        </div>
-        <p className="text-[12px] text-[var(--text-tertiary)] mt-4">
-          After running the SQL, reload the page.
+        </details>
+
+        <p className="text-[12px] text-[var(--text-tertiary)] mt-4 text-center">
+          After running, reload this page to continue.
         </p>
       </div>
     </div>
@@ -275,8 +297,6 @@ create table if not exists public.direct_conversations (
   created_at timestamptz not null default now()
 );
 alter table public.direct_conversations enable row level security;
-create policy "conv_read"   on public.direct_conversations for select to authenticated
-  using (exists (select 1 from public.conversation_members where conversation_id = id and user_id = auth.uid()));
 create policy "conv_insert" on public.direct_conversations for insert to authenticated with check (true);
 
 create table if not exists public.conversation_members (
@@ -290,6 +310,10 @@ create policy "cm_read" on public.conversation_members for select to authenticat
     select conversation_id from public.conversation_members where user_id = auth.uid()
   ));
 create policy "cm_insert" on public.conversation_members for insert to authenticated with check (true);
+
+-- conv_read must come after conversation_members exists (policy references the table)
+create policy "conv_read" on public.direct_conversations for select to authenticated
+  using (exists (select 1 from public.conversation_members where conversation_id = id and user_id = auth.uid()));
 
 create table if not exists public.direct_messages (
   id uuid primary key default gen_random_uuid(),

@@ -124,7 +124,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (authErr) {
-        setError(authErr.message);
+        const msg = authErr.message ?? "";
+        if (msg.toLowerCase().includes("rate limit") || msg.toLowerCase().includes("email rate")) {
+          setError("Too many signup attempts. In Supabase → Authentication → Providers → Email, disable \"Confirm email\" to skip this limit.");
+        } else if (msg.toLowerCase().includes("already registered")) {
+          setError("An account with this email already exists. Try signing in.");
+        } else {
+          setError(msg || "Sign up failed. Please try again.");
+        }
         throw authErr;
       }
       if (!data.user) {

@@ -37,11 +37,6 @@ create table if not exists public.direct_conversations (
   created_at timestamptz not null default now()
 );
 alter table public.direct_conversations enable row level security;
-create policy "conv_read" on public.direct_conversations for select to authenticated
-  using (exists (
-    select 1 from public.conversation_members
-    where conversation_id = id and user_id = auth.uid()
-  ));
 create policy "conv_insert" on public.direct_conversations for insert to authenticated with check (true);
 
 -- conversation_members
@@ -56,6 +51,13 @@ create policy "cm_read" on public.conversation_members for select to authenticat
     select conversation_id from public.conversation_members where user_id = auth.uid()
   ));
 create policy "cm_insert" on public.conversation_members for insert to authenticated with check (true);
+
+-- conv_read after conversation_members exists (USING clause references it)
+create policy "conv_read" on public.direct_conversations for select to authenticated
+  using (exists (
+    select 1 from public.conversation_members
+    where conversation_id = id and user_id = auth.uid()
+  ));
 
 -- direct_messages
 create table if not exists public.direct_messages (
