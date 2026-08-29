@@ -1,0 +1,10 @@
+{
+  "description": "Experience seamless voice communication with an intuitive interface designed for effortless call management, perfect for personal and professional use.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
