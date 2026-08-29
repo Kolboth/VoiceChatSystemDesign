@@ -86,6 +86,21 @@ function readableMediaError(error: unknown) {
     }
   }
   if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "string" && error.trim()) return error;
+  if (error && typeof error === "object") {
+    const detail = error as Record<string, unknown>;
+    for (const key of ["message", "reason", "name", "code"]) {
+      const value = detail[key];
+      if (typeof value === "string" && value.trim()) return value;
+      if (typeof value === "number") return `Voice connection failed (${value}).`;
+    }
+    try {
+      const serialized = JSON.stringify(error);
+      if (serialized && serialized !== "{}") return `Voice connection failed: ${serialized}`;
+    } catch {
+      // Ignore non-serializable SDK errors and use the final fallback below.
+    }
+  }
   return "Voice audio could not be started.";
 }
 
@@ -361,6 +376,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       // browser autoplay policy; the UI still exposes enableAudio if it is blocked.
       await room.startAudio().catch(() => setAudioPlaybackBlocked(true));
     } catch (connectError) {
+      console.error("[voice] connection failed", connectError);
       await teardownRoom();
       setState("failed");
       setError(readableMediaError(connectError));
