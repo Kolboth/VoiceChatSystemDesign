@@ -140,7 +140,7 @@ function AppContent() {
     <div className="flex h-full flex-col bg-[var(--background)]">
       <header className="qp-mobile-bar hidden h-12 shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--surface-0)] px-3">
         <button onClick={() => setMobileNavOpen(true)} className="qp-interactive flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)]" aria-label="Open navigation"><Menu size={18} /></button>
-        <span className="text-[13px] font-semibold tracking-[-.02em]">Resonance</span>
+        <span className="text-[13px] font-semibold tracking-[-.02em]">Beo Beo VC</span>
         <button onClick={() => setPaletteOpen(true)} className="qp-interactive flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)]" aria-label="Search and commands"><Search size={17} /></button>
       </header>
       <div className="flex flex-1 overflow-hidden bg-[var(--background)]">

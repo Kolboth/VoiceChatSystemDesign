@@ -50,8 +50,8 @@ export function CommunityRail({ view, onNavigate, inVoiceRoomId }: CommunityRail
   return (
     <>
       <nav className="flex min-h-0 w-full flex-1 flex-col items-center gap-1 py-2.5" aria-label="Communities">
-        <div className="mb-1 flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] bg-[var(--text-primary)] text-[11px] font-bold tracking-[-.04em] text-[var(--background)]" aria-label="Resonance">
-          R
+        <div className="mb-1 flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] bg-[var(--text-primary)] text-[11px] font-bold tracking-[-.04em] text-[var(--background)]" aria-label="Beo Beo VC">
+          BB
         </div>
 
         <RailItem label="Home" active={view.section === "home"} onClick={() => onNavigate({ section: "home" })}>

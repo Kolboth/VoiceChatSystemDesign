@@ -1,5 +1,6 @@
 {
-  "description": "Experience seamless voice communication with an intuitive interface designed for effortless call management, perfect for personal and professional use.",
+  "title": "Beo Beo VC",
+  "description": "Beo Beo VC makes it easy to talk with friends and communities through voice rooms, direct calls, and messages.",
   "robots": {
     "index": false
   },

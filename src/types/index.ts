@@ -1,4 +1,4 @@
-export const APP_NAME = "Resonance";
+export const APP_NAME = "Beo Beo VC";
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
