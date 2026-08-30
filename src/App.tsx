@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from "./features/auth/auth-context";
 import { VoiceProvider, useVoice } from "./features/voice/voice-context";
 import { SocialProvider } from "./features/social/social-context";
 import { CommunityProvider, useCommunities } from "./features/communities/community-context";
-import { CallProvider } from "./features/calls/call-context";
+import { CallProvider, useCall } from "./features/calls/call-context";
 import type { AppView, Theme } from "./types";
 
 import { AuthPage } from "./pages/AuthPage";
@@ -37,6 +37,7 @@ function LoadingShell() {
 
 function UserPanel({ onNavigate }: { onNavigate: (v: AppView) => void }) {
   const { profile, signOut } = useAuth();
+  const { activeCall, endCall } = useCall();
   const [menuOpen, setMenuOpen] = useState(false);
   if (!profile) return null;
 
@@ -69,7 +70,11 @@ function UserPanel({ onNavigate }: { onNavigate: (v: AppView) => void }) {
             </button>
             <div className="h-px bg-[var(--border-subtle)] my-1" />
             <button
-              onClick={() => { signOut(); setMenuOpen(false); }}
+              onClick={async () => {
+                if (activeCall) await endCall();
+                await signOut();
+                setMenuOpen(false);
+              }}
               className="w-full text-left px-3 py-1.5 text-[13px] text-[var(--danger)] hover:bg-[var(--danger)]/10 transition-colors"
             >
               Sign out

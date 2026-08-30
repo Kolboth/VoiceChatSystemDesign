@@ -126,7 +126,17 @@ export function CallOverlay() {
             </button>
           )}
 
-          {isConnecting && !isOutgoing && <p className="text-[12px] text-[var(--text-tertiary)]">Securing voice connection…</p>}
+          {isConnecting && !isOutgoing && (
+            <div className="flex w-full flex-col items-center gap-3">
+              <p className="text-[12px] text-[var(--text-tertiary)]">Securing voice connection…</p>
+              <button
+                onClick={endCall}
+                className="qp-interactive flex h-8 items-center justify-center gap-2 rounded-[var(--radius-md)] border border-[var(--danger)]/20 bg-[var(--danger)]/[0.07] px-3 text-[12px] font-medium text-[var(--danger)] hover:bg-[var(--danger)]/12"
+              >
+                <PhoneOff size={14} /> Cancel call
+              </button>
+            </div>
+          )}
 
           {isConnected && (
             <div className="flex items-center gap-1.5">

@@ -37,6 +37,8 @@ interface CallContextValue {
 }
 
 const CallContext = createContext<CallContextValue | null>(null);
+const RING_TIMEOUT_MS = 30_000;
+const CONNECT_TIMEOUT_MS = 25_000;
 
 type RawCallSession = {
   id: string;
@@ -86,6 +88,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const ringTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const joiningCallRef = useRef<string | null>(null);
   const markedConnectedRef = useRef<string | null>(null);
+  const handleCallRowRef = useRef<(row: RawCallSession) => Promise<void>>(async () => undefined);
 
   useEffect(() => {
     activeCallRef.current = activeCall;
@@ -164,11 +167,12 @@ export function CallProvider({ children }: { children: ReactNode }) {
           friendDisplayName: displayName,
         });
         clearRingTimer();
+        const remainingRingTime = Math.max(0, RING_TIMEOUT_MS - (Date.now() - new Date(row.created_at).getTime()));
         ringTimerRef.current = setTimeout(async () => {
           const active = activeCallRef.current;
           if (!active || active.session.id !== row.id || active.state !== "incoming-ringing") return;
           await supabase.rpc("finish_direct_call", { p_call_id: row.id, p_status: "missed" });
-        }, 30_000);
+        }, remainingRingTime);
       }
       return;
     }
@@ -216,6 +220,10 @@ export function CallProvider({ children }: { children: ReactNode }) {
   }, [profile, friendName, clearRingTimer, connectAcceptedCall, voice, closeOverlayAfter]);
 
   useEffect(() => {
+    handleCallRowRef.current = handleCallRow;
+  }, [handleCallRow]);
+
+  useEffect(() => {
     if (!profile) return;
     let cancelled = false;
 
@@ -228,7 +236,28 @@ export function CallProvider({ children }: { children: ReactNode }) {
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (!cancelled && data) await handleCallRow(data as RawCallSession);
+      if (cancelled || !data) return;
+
+      const row = data as RawCallSession;
+      const createdAge = Date.now() - new Date(row.created_at).getTime();
+      const acceptedAge = row.accepted_at ? Date.now() - new Date(row.accepted_at).getTime() : createdAge;
+
+      // A provider mount means this browser has started a fresh authenticated app
+      // session. Never resurrect an old call indefinitely after logout or reload.
+      if (row.status === "connected") {
+        await supabase.rpc("finish_direct_call", { p_call_id: row.id, p_status: "ended" });
+        return;
+      }
+      if (row.status === "ringing" && createdAge >= RING_TIMEOUT_MS) {
+        await supabase.rpc("finish_direct_call", { p_call_id: row.id, p_status: "missed" });
+        return;
+      }
+      if (row.status === "accepted" && acceptedAge >= CONNECT_TIMEOUT_MS) {
+        await supabase.rpc("finish_direct_call", { p_call_id: row.id, p_status: "failed" });
+        return;
+      }
+
+      await handleCallRowRef.current(row);
     };
     void hydrate();
 
@@ -239,7 +268,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         { event: "*", schema: "public", table: "call_sessions" },
         (payload) => {
           const row = payload.new as RawCallSession | undefined;
-          if (row?.id) void handleCallRow(row);
+          if (row?.id) void handleCallRowRef.current(row);
         },
       )
       .subscribe();
@@ -249,7 +278,34 @@ export function CallProvider({ children }: { children: ReactNode }) {
       clearRingTimer();
       void supabase.removeChannel(channel);
     };
-  }, [profile, handleCallRow, clearRingTimer]);
+  }, [profile?.id, clearRingTimer]);
+
+  useEffect(() => {
+    if (!activeCall || !["connecting", "reconnecting"].includes(activeCall.state)) return;
+    const callId = activeCall.session.id;
+    const timeout = window.setTimeout(async () => {
+      const current = activeCallRef.current;
+      if (!current || current.session.id !== callId || !["connecting", "reconnecting"].includes(current.state)) return;
+
+      try {
+        await supabase.rpc("finish_direct_call", { p_call_id: callId, p_status: "failed" });
+      } catch {
+        // The local timeout still needs to release the UI if signalling is unavailable.
+      }
+      if (voice.sessionKind === "direct" && voice.directCallId === callId) {
+        await voice.leaveRoom().catch(() => undefined);
+      }
+      setError("The call could not establish a voice connection.");
+      setActiveCall({
+        ...current,
+        state: "failed",
+        session: { ...current.session, status: "failed", endedAt: new Date().toISOString() },
+      });
+      closeOverlayAfter(3000);
+    }, CONNECT_TIMEOUT_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [activeCall?.session.id, activeCall?.state, voice.sessionKind, voice.directCallId, voice.leaveRoom, closeOverlayAfter]);
 
   useEffect(() => {
     const current = activeCallRef.current;
@@ -318,7 +374,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
         const current = activeCallRef.current;
         if (!current || current.session.id !== callId || current.state !== "outgoing-ringing") return;
         await supabase.rpc("finish_direct_call", { p_call_id: callId, p_status: "missed" });
-      }, 30_000);
+      }, RING_TIMEOUT_MS);
     } catch (callError) {
       setError(errorMessage(callError));
       throw callError;
