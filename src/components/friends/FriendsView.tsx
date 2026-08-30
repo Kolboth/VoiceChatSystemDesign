@@ -20,7 +20,7 @@ function FriendRow({ entry, onMessage, onCall, canCall = true, onAccept, onDecli
 }) {
   const { profile, relation } = entry;
   return (
-    <div className="group flex min-h-12 items-center gap-3 border-b border-[var(--border-subtle)] px-3 py-2.5 qp-interactive last:border-b-0 hover:bg-[var(--surface-2)]">
+    <div className="group flex min-h-12 flex-wrap items-center gap-3 border-b border-[var(--border-subtle)] px-3 py-2.5 qp-interactive last:border-b-0 hover:bg-[var(--surface-2)] sm:flex-nowrap">
       <div className="relative">
         <Avatar displayName={profile.displayName} userId={profile.id} size="md" />
         <div className="absolute -bottom-0.5 -right-0.5">
@@ -38,7 +38,7 @@ function FriendRow({ entry, onMessage, onCall, canCall = true, onAccept, onDecli
         </p>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1 opacity-70 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+      <div className="ml-auto flex shrink-0 items-center gap-1 opacity-100 transition-opacity sm:opacity-70 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
         {relation === "friends" && (
           <>
             <Button variant="ghost" size="sm" onClick={onMessage} aria-label={`Message ${profile.displayName}`}>
@@ -173,15 +173,15 @@ export function FriendsView({ onOpenConversation }: { onOpenConversation: (convI
   return (
     <div className="flex h-full flex-col qp-page-enter">
       {/* Header */}
-      <div className="flex shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--background)]/95 px-5 py-3.5">
-        <div className="flex min-w-0 items-center gap-4">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[var(--border-subtle)] bg-[var(--background)]/95 px-3 py-3 sm:flex-nowrap sm:px-5 sm:py-3.5">
+        <div className="contents sm:flex sm:min-w-0 sm:items-center sm:gap-4">
           <h1 className="text-[15px] font-semibold text-[var(--text-primary)]">Friends</h1>
-          <div className="qp-toolbar flex items-center gap-0.5 rounded-[var(--radius-md)] p-0.5">
+          <div className="qp-toolbar order-3 flex w-full items-center gap-0.5 overflow-x-auto rounded-[var(--radius-md)] p-0.5 sm:order-none sm:w-auto">
             {(["online","all","pending","blocked"] as FriendsTab[]).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`qp-interactive relative rounded-[5px] px-2.5 py-1 text-[12px] capitalize ${tab === t ? "bg-[var(--surface-4)] text-[var(--text-primary)] font-medium" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"}`}
+                className={`qp-interactive relative flex-1 whitespace-nowrap rounded-[5px] px-2.5 py-1 text-[12px] capitalize sm:flex-none ${tab === t ? "bg-[var(--surface-4)] text-[var(--text-primary)] font-medium" : "text-[var(--text-secondary)] hover:text-[var(--text-primary)]"}`}
               >
                 {t}
                 {t === "pending" && pendingCount > 0 && (
@@ -200,7 +200,7 @@ export function FriendsView({ onOpenConversation }: { onOpenConversation: (convI
       {showAddFriend && <AddFriend onSent={() => setShowAddFriend(false)} />}
 
       {/* Friend list */}
-      <div className="flex-1 overflow-y-auto px-5 py-4">
+      <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-5 sm:py-4">
         {filtered.length === 0 ? (
           <EmptyState
             title={tab === "online" ? "No friends online" : tab === "pending" ? "No pending requests" : tab === "blocked" ? "No blocked users" : "No friends yet"}

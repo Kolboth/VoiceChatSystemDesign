@@ -38,11 +38,11 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
   return (
     <div className="flex-1 overflow-y-auto qp-page-enter">
-      <div className="mx-auto w-full max-w-5xl px-5 py-5 sm:px-7 sm:py-6">
-        <div className="mb-7 flex items-start justify-between gap-4">
+      <div className="mx-auto w-full max-w-5xl px-4 py-4 sm:px-7 sm:py-6">
+        <div className="mb-6 flex items-start justify-between gap-2 sm:mb-7 sm:gap-4">
           <div>
             <p className="qp-kicker mb-1.5">Beo Beo VC</p>
-            <h1 className="text-[22px] font-semibold tracking-[-0.025em] text-[var(--text-primary)]">Who do you want to talk to?</h1>
+            <h1 className="text-[20px] font-semibold tracking-[-0.025em] text-[var(--text-primary)] sm:text-[22px]">Who do you want to talk to?</h1>
             <p className="mt-1 text-[13px] text-[var(--text-secondary)]">Jump back into voice, call a friend, or open one of your communities.</p>
           </div>
           <Button variant="outline" size="sm" onClick={() => onNavigate({ section: "friends" })} leadingIcon={<Users size={14} />}>

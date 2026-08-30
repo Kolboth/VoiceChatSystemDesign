@@ -431,7 +431,7 @@ interface SettingsProps {
 
 export function Settings({ page = "account", theme, onThemeChange }: SettingsProps) {
   return (
-    <div className="flex-1 overflow-y-auto px-6 py-6 sm:px-8 max-w-3xl qp-page-enter">
+    <div className="flex-1 overflow-y-auto px-4 py-4 sm:max-w-3xl sm:px-8 sm:py-6 qp-page-enter">
       {page === "account" && <AccountSettings />}
       {page === "voice-audio" && <VoiceAudioSettings />}
       {page === "appearance" && <AppearanceSettings theme={theme} onThemeChange={onThemeChange} />}

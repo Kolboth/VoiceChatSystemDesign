@@ -51,7 +51,7 @@ function VoiceControlBar({ voice }: { voice: VoiceRoomController }) {
 
   return (
     <>
-      <div className="shrink-0 border-t border-[var(--border-subtle)] bg-[var(--surface-0)]/90 px-4 py-2.5 backdrop-blur-sm">
+      <div className="qp-mobile-safe-bottom shrink-0 border-t border-[var(--border-subtle)] bg-[var(--surface-0)]/90 px-2 py-2.5 backdrop-blur-sm sm:px-4">
         <div className="mx-auto flex max-w-xl items-center justify-center gap-1.5">
           <Tooltip label={isMuted ? "Unmute (M)" : "Mute (M)"} side="top">
             <button
@@ -152,8 +152,8 @@ export function VoiceRoom({ room, voice }: VoiceRoomProps) {
     <div className="relative flex h-full flex-col qp-page-enter">
       {state === "reconnecting" && <ReconnectBanner />}
 
-      <header className="shrink-0 border-b border-[var(--border-subtle)] bg-[var(--background)]/95 px-5 py-3.5">
-        <div className="flex items-center justify-between gap-4">
+      <header className="shrink-0 border-b border-[var(--border-subtle)] bg-[var(--background)]/95 px-3 py-2.5 sm:px-5 sm:py-3.5">
+        <div className="flex items-center justify-between gap-2 sm:gap-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[var(--text-secondary)]">
@@ -184,7 +184,7 @@ export function VoiceRoom({ room, voice }: VoiceRoomProps) {
             )}
 
             {isConnected && participantCount > 0 && (
-              <div className="qp-toolbar flex items-center gap-0.5 rounded-[var(--radius-md)] p-0.5">
+              <div className="qp-toolbar hidden items-center gap-0.5 rounded-[var(--radius-md)] p-0.5 sm:flex">
                 {(["grid", "focus", "compact"] as Layout[]).map(mode => {
                   const Icon = LAYOUT_ICONS[mode];
                   return (
@@ -203,8 +203,8 @@ export function VoiceRoom({ room, voice }: VoiceRoomProps) {
               </div>
             )}
 
-            <Button onClick={() => setInviteOpen(true)} variant="outline" size="sm" leadingIcon={<UserPlus size={14} />}>
-              Invite
+            <Button onClick={() => setInviteOpen(true)} variant="outline" size="sm" leadingIcon={<UserPlus size={14} />} aria-label="Invite people">
+              <span className="hidden sm:inline">Invite</span>
             </Button>
 
             <Tooltip label="Room options" side="bottom">
@@ -217,14 +217,14 @@ export function VoiceRoom({ room, voice }: VoiceRoomProps) {
       </header>
 
       {voice.roomId === room.id && voice.error && (
-        <div className="mx-5 mt-3 rounded-[var(--radius-md)] border border-[var(--danger)]/18 bg-[var(--danger)]/[0.06] px-3 py-2 text-[12px] text-[var(--danger)]">
+        <div className="mx-3 mt-3 rounded-[var(--radius-md)] border border-[var(--danger)]/18 bg-[var(--danger)]/[0.06] px-3 py-2 text-[12px] text-[var(--danger)] sm:mx-5">
           {voice.error}
         </div>
       )}
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-5">
         {!isConnected ? (
-          <div className="qp-voice-stage mx-auto flex min-h-[360px] max-w-2xl items-center justify-center rounded-[var(--radius-xl)] px-6 py-12">
+          <div className="qp-voice-stage mx-auto flex min-h-[280px] max-w-2xl items-center justify-center rounded-[var(--radius-xl)] px-4 py-8 sm:min-h-[360px] sm:px-6 sm:py-12">
             <EmptyState
               title={room.name}
               description={room.topic ?? "Join the room to hear and talk with everyone here."}
@@ -237,7 +237,7 @@ export function VoiceRoom({ room, voice }: VoiceRoomProps) {
             />
           </div>
         ) : participants.length === 0 ? (
-          <div className="qp-voice-stage mx-auto flex min-h-[360px] max-w-2xl items-center justify-center rounded-[var(--radius-xl)] px-6 py-12">
+          <div className="qp-voice-stage mx-auto flex min-h-[280px] max-w-2xl items-center justify-center rounded-[var(--radius-xl)] px-4 py-8 sm:min-h-[360px] sm:px-6 sm:py-12">
             <EmptyState
               title="You're the first one here"
               description="Invite a friend and keep this room open while you wait."

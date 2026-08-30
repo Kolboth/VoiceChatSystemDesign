@@ -200,7 +200,7 @@ function AppContent() {
         </main>
       </div>
 
-      {mobileNavOpen && <div className="fixed inset-0 z-[90] flex bg-black/55" role="dialog" aria-modal="true" aria-label="Navigation"><div className="flex w-[min(86vw,320px)] qp-panel-enter bg-[var(--surface-0)]"><div className="flex w-14 shrink-0 flex-col border-r border-[var(--border-subtle)]"><CommunityRail view={view} onNavigate={navigate} inVoiceRoomId={voice.roomId} /><UserPanel onNavigate={navigate} /></div><NavigationSidebar view={view} onNavigate={navigate} connectedRoomId={voice.roomId} /></div><button onClick={() => setMobileNavOpen(false)} className="m-3 flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-3)]" aria-label="Close navigation"><X size={17} /></button></div>}
+      {mobileNavOpen && <div className="fixed inset-0 z-[90] flex bg-black/55" role="dialog" aria-modal="true" aria-label="Navigation"><div className="qp-mobile-drawer flex w-[min(92vw,340px)] qp-panel-enter bg-[var(--surface-0)]"><div className="flex w-14 shrink-0 flex-col border-r border-[var(--border-subtle)]"><CommunityRail view={view} onNavigate={navigate} inVoiceRoomId={voice.roomId} /><UserPanel onNavigate={navigate} /></div><NavigationSidebar view={view} onNavigate={navigate} connectedRoomId={voice.roomId} /></div><button onClick={() => setMobileNavOpen(false)} className="m-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--surface-3)]" aria-label="Close navigation"><X size={17} /></button></div>}
 
       <VoiceConnectionStrip voice={voice} />
       <CallOverlay />

@@ -64,7 +64,7 @@ export function CallOverlay() {
   return (
     <>
       <div
-        className="qp-raised fixed bottom-4 right-4 z-50 w-[318px] overflow-hidden rounded-[var(--radius-xl)] animate-call-enter"
+        className="qp-raised fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-50 overflow-hidden rounded-[var(--radius-xl)] animate-call-enter sm:inset-x-auto sm:bottom-4 sm:right-4 sm:w-[318px]"
         role="dialog"
         aria-label="Voice call"
       >

@@ -42,7 +42,7 @@ export function VoiceConnectionStrip({ voice }: VoiceConnectionStripProps) {
 
   return (
     <>
-      <div className="flex shrink-0 items-center gap-4 border-t border-[var(--border-subtle)] bg-[var(--surface-0)] px-3 py-2">
+      <div className="qp-mobile-safe-bottom flex shrink-0 items-center gap-2 border-t border-[var(--border-subtle)] bg-[var(--surface-0)] px-2 py-2 sm:gap-4 sm:px-3">
         {/* Status + room info */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">

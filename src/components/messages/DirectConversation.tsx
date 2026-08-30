@@ -146,7 +146,7 @@ export function DirectConversation({ conversationId, friendId, friendDisplayName
 
   return (
     <div className="flex h-full flex-col qp-page-enter">
-      <header className="flex shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--background)]/95 px-4 py-3">
+      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--border-subtle)] bg-[var(--background)]/95 px-3 py-2.5 sm:px-4 sm:py-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <div className="relative shrink-0">
             <Avatar displayName={friend.displayName} userId={friend.id} avatarUrl={friend.avatarUrl} size="sm" />
@@ -188,7 +188,7 @@ export function DirectConversation({ conversationId, friendId, friendDisplayName
         <div ref={bottomRef} />
       </div>
 
-      <div className="shrink-0 border-t border-[var(--border-subtle)] bg-[var(--surface-0)]/80 px-4 py-3">
+      <div className="qp-mobile-safe-bottom shrink-0 border-t border-[var(--border-subtle)] bg-[var(--surface-0)]/80 px-3 py-2.5 sm:px-4 sm:py-3">
         <form onSubmit={handleSend} className="mx-auto flex max-w-3xl items-end gap-2">
           <div className="flex min-h-9 flex-1 items-center rounded-[var(--radius-md)] border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 transition-colors focus-within:border-[var(--accent)]/70 focus-within:ring-1 focus-within:ring-[var(--accent)]/25">
             <input

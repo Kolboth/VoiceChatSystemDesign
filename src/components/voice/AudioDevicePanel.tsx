@@ -66,12 +66,15 @@ export function AudioDevicePanel({ voice, anchor, onClose, onOpenFullSettings }:
 
   const micOptions = voice.microphoneDevices.map(d => ({ value: d.deviceId, label: d.label || "Microphone" }));
   const outputOptions = voice.outputDevices.map(d => ({ value: d.deviceId, label: d.label || "Speaker" }));
+  const mobile = window.innerWidth < 640;
 
   return (
     <div
       ref={ref}
-      className="qp-raised qp-panel-enter fixed z-50 w-80 overflow-hidden rounded-[var(--radius-xl)]"
-      style={{ bottom: window.innerHeight - anchor.top + 8, left: anchor.left }}
+      className="qp-raised qp-panel-enter fixed z-50 overflow-hidden rounded-[var(--radius-xl)]"
+      style={mobile
+        ? { bottom: "max(0.75rem, env(safe-area-inset-bottom))", left: 12, right: 12 }
+        : { bottom: window.innerHeight - anchor.top + 8, left: anchor.left, width: 320 }}
       role="dialog"
       aria-label="Audio device settings"
     >

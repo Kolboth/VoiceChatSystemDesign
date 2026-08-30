@@ -91,6 +91,7 @@
 
 html, body, #root {
   height: 100%;
+  height: 100dvh;
   overflow: hidden;
 }
 
@@ -214,6 +215,8 @@ h1, h2, h3, h4, h5, h6, .qp-display {
   .qp-mobile-bar { display: flex; }
   .qp-desktop-rail, .qp-desktop-sidebar { display: none !important; }
   .qp-member-inspector { width: min(88vw, 320px); }
+  .qp-mobile-drawer .qp-sidebar { width: auto !important; min-width: 0; flex: 1 1 auto; }
+  .qp-mobile-safe-bottom { padding-bottom: max(.625rem, env(safe-area-inset-bottom)); }
   button, [role="button"] { min-height: 40px; }
 }
 

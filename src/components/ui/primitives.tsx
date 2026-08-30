@@ -331,18 +331,18 @@ export function Dialog({ open, onClose, title, children, className = "", width =
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" onClick={onClose} aria-hidden="true" />
-      <div className={`relative w-full ${width} bg-[var(--surface-2)] rounded-[var(--radius-xl)] border border-[var(--border-subtle)] shadow-2xl animate-fade-in ${className}`}>
+      <div className={`relative max-h-[calc(100dvh-0.5rem)] w-full overflow-y-auto ${width} bg-[var(--surface-2)] rounded-t-[var(--radius-xl)] border border-[var(--border-subtle)] shadow-2xl animate-fade-in sm:max-h-[calc(100dvh-2rem)] sm:rounded-[var(--radius-xl)] ${className}`}>
         {title && (
-          <div className="flex items-center justify-between px-5 pt-4 pb-0">
+          <div className="sticky top-0 z-10 flex items-center justify-between bg-[var(--surface-2)] px-4 pt-4 pb-1 sm:px-5 sm:pb-0">
             <h2 className="text-[15px] font-semibold text-[var(--text-primary)]">{title}</h2>
             <button onClick={onClose} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] p-1 rounded-[var(--radius-sm)] transition-colors" aria-label="Close dialog">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
             </button>
           </div>
         )}
-        <div className="p-5">{children}</div>
+        <div className="p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5">{children}</div>
       </div>
     </div>
   );
