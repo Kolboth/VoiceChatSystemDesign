@@ -14,7 +14,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: "bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)] shadow-[inset_0_1px_rgba(255,255,255,0.08)] disabled:opacity-50",
+  primary: "bg-[var(--accent)] text-[var(--accent-fg)] hover:bg-[var(--accent-hover)] shadow-[inset_0_1px_rgba(255,255,255,0.18),0_0_18px_var(--terminal-glow)] disabled:opacity-50",
   secondary: "bg-[var(--surface-2)] text-[var(--text-primary)] hover:bg-[var(--surface-3)] border border-[var(--border-subtle)]",
   ghost: "text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]",
   outline: "border border-[var(--border-strong)] text-[var(--text-primary)] hover:bg-[var(--surface-2)]",
@@ -482,7 +482,7 @@ export function ConnectionQualityIcon({ quality }: { quality: ConnectionQuality 
 export function Badge({ children, variant = "default" }: { children: ReactNode; variant?: "default" | "accent" | "success" | "warning" | "danger" }) {
   const colors = {
     default: "bg-[var(--surface-3)] text-[var(--text-secondary)]",
-    accent: "bg-[var(--accent)] text-white",
+    accent: "bg-[var(--accent)] text-[var(--accent-fg)]",
     success: "bg-[var(--success)]/20 text-[var(--success)]",
     warning: "bg-[var(--warning)]/20 text-[var(--warning)]",
     danger: "bg-[var(--danger)]/20 text-[var(--danger)]",

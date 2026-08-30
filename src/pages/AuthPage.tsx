@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Mic2 } from "lucide-react";
+import { Check } from "lucide-react";
 import { useAuth } from "../features/auth/auth-context";
 import { Button, Input, InlineError } from "../components/ui/primitives";
 import { APP_NAME } from "../types";
@@ -47,12 +47,10 @@ export function AuthPage() {
   }
 
   return (
-    <div className="flex h-full items-center justify-center bg-[var(--background)] px-5 py-8 qp-page-enter">
+    <div className="qp-terminal-canvas flex h-full items-center justify-center px-5 py-8 qp-page-enter">
       <div className="w-full max-w-[390px]">
         <div className="mb-8 flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] bg-[var(--text-primary)] text-[var(--background)]">
-            <Mic2 size={15} />
-          </div>
+          <img src="/beo-beo-vc-icon.png" alt="" className="h-9 w-9 rounded-[var(--radius-md)] object-cover shadow-[0_0_22px_var(--terminal-glow)]" />
           <div>
             <p className="text-[14px] font-semibold tracking-[-0.01em] text-[var(--text-primary)]">{APP_NAME}</p>
             <p className="text-[10px] text-[var(--text-tertiary)]">Voice with less friction.</p>

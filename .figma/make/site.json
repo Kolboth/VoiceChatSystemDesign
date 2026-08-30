@@ -1,6 +1,9 @@
 {
   "title": "Beo Beo VC",
   "description": "Beo Beo VC makes it easy to talk with friends and communities through voice rooms, direct calls, and messages.",
+  "icons": {
+    "icon": "/beo-beo-vc-icon.png"
+  },
   "robots": {
     "index": false
   },

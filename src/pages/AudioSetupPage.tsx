@@ -186,7 +186,7 @@ export function AudioSetupPage() {
   const selectedOutputLabel = outputDevices.find(d => d.deviceId === selectedOutputId)?.label || "Default Speaker";
 
   return (
-    <div className="flex h-full items-center justify-center bg-[var(--background)] p-6 qp-page-enter">
+    <div className="qp-terminal-canvas flex h-full items-center justify-center p-6 qp-page-enter">
       <div className="w-full max-w-[460px]">
         {/* Progress bar */}
         <div className="mb-8 flex items-center gap-1">
