@@ -52,7 +52,7 @@ export function AuthPage() {
         <div className="mb-8 flex items-center gap-2.5">
           <img src="/beo-beo-vc-icon.png" alt="" className="h-9 w-9 rounded-[var(--radius-md)] object-cover shadow-[0_0_22px_var(--terminal-glow)]" />
           <div>
-            <p className="text-[14px] font-semibold tracking-[-0.01em] text-[var(--text-primary)]">{APP_NAME}</p>
+            <p className="qp-display text-[14px] text-[var(--text-primary)]">{APP_NAME}</p>
             <p className="text-[10px] text-[var(--text-tertiary)]">Voice with less friction.</p>
           </div>
         </div>
