@@ -62,7 +62,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
             onClick={() => onNavigate({ section: "friends" })}
             className="mb-6 flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--accent)]/18 bg-[var(--accent)]/[0.055] px-3 py-2.5 text-left qp-interactive hover:bg-[var(--accent)]/[0.08]"
           >
-            <div className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--accent)]/10 text-[var(--accent)]"><Users size={14} /></div>
+            <div className="flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--accent)]/10 text-[var(--accent-text)]"><Users size={14} /></div>
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-medium text-[var(--text-primary)]">{pendingRequests.length} friend request{pendingRequests.length === 1 ? "" : "s"} waiting</p>
               <p className="text-[11px] text-[var(--text-tertiary)]">Review incoming requests</p>

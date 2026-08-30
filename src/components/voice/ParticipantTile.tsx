@@ -129,7 +129,7 @@ export function ParticipantTile({ participant, onContextMenu, compact = false }:
 
         <div className="flex shrink-0 items-center gap-1.5 text-[var(--text-tertiary)]">
           {hasRaisedHand && <Tooltip label="Hand raised" side="top"><Hand size={13} className="text-[var(--warning)]" /></Tooltip>}
-          {isModerator && <Tooltip label="Moderator" side="top"><ShieldCheck size={13} className="text-[var(--accent)]" /></Tooltip>}
+          {isModerator && <Tooltip label="Moderator" side="top"><ShieldCheck size={13} className="text-[var(--accent-text)]" /></Tooltip>}
           {isServerMuted ? (
             <Tooltip label="Server muted" side="top"><MicOff size={13} className="text-[var(--danger)]" /></Tooltip>
           ) : isMuted ? (

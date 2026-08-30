@@ -37,7 +37,7 @@ function RoomNavItem({ room, isSelected, isConnected, liveProfiles, onClick }: {
       <div
         className={`group flex min-h-8 items-center gap-1.5 rounded-[var(--radius-sm)] px-2 py-1 cursor-pointer qp-interactive ${
           isSelected ? "bg-[var(--surface-2)] text-[var(--text-primary)]" :
-          isConnected ? "bg-[var(--accent)]/10 text-[var(--accent)]" :
+          isConnected ? "bg-[var(--accent)]/10 text-[var(--accent-text)]" :
           "text-[var(--text-secondary)] hover:bg-[var(--surface-1)] hover:text-[var(--text-primary)]"
         }`}
         onClick={onClick}
@@ -106,7 +106,7 @@ function DirectConvItem({ friendId, name, unread, isSelected, onClick }: {
       <Avatar displayName={name} userId={friendId} size="sm" />
       <span className="flex-1 text-[13px] truncate text-[var(--text-primary)]">{name}</span>
       {unread > 0 && (
-        <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--accent)] text-[11px] font-medium text-white flex items-center justify-center tabular-nums">{unread}</span>
+        <span className="shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--accent)] text-[11px] font-medium text-[var(--accent-fg)] flex items-center justify-center tabular-nums">{unread}</span>
       )}
     </div>
   );
@@ -299,7 +299,7 @@ export function NavigationSidebar({ view, onNavigate, connectedRoomId }: Navigat
             ))}
 
             {canManage && rooms.length === 0 && (
-              <button onClick={() => setCreateRoomOpen(true)} className="mx-2 mt-2 text-[12px] text-[var(--accent)] hover:underline">Create voice channel</button>
+              <button onClick={() => setCreateRoomOpen(true)} className="mx-2 mt-2 text-[12px] text-[var(--accent-text)] hover:underline">Create voice channel</button>
             )}
           </div>
         </div>

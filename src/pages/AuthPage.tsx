@@ -108,7 +108,7 @@ export function AuthPage() {
             </form>
 
             <div className="mt-5 text-[12px]">
-              {view === "sign-in" && <button onClick={() => { setView("sign-up"); setLocalError(null); }} className="text-[var(--accent)] hover:text-[var(--accent-hover)]">Create an account</button>}
+              {view === "sign-in" && <button onClick={() => { setView("sign-up"); setLocalError(null); }} className="text-[var(--accent-text)] hover:underline">Create an account</button>}
               {view === "sign-up" && <button onClick={() => { setView("sign-in"); setLocalError(null); }} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]">Already have an account? Sign in</button>}
               {view === "forgot-password" && <button onClick={() => { setView("sign-in"); setLocalError(null); }} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]">Back to sign in</button>}
             </div>

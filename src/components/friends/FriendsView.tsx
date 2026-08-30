@@ -185,7 +185,7 @@ export function FriendsView({ onOpenConversation }: { onOpenConversation: (convI
               >
                 {t}
                 {t === "pending" && pendingCount > 0 && (
-                  <span className="ml-1 text-[11px] font-semibold text-[var(--accent)]">{pendingCount}</span>
+                  <span className="ml-1 text-[11px] font-semibold text-[var(--accent-text)]">{pendingCount}</span>
                 )}
               </button>
             ))}

@@ -202,7 +202,7 @@ export function AudioSetupPage() {
         {step === "permission" && (
           <div className="flex flex-col gap-6">
             <div className="flex items-start gap-4">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--accent)]/[0.07] text-[var(--accent)] mt-0.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--accent)]/[0.07] text-[var(--accent-text)] mt-0.5">
                 <MicIcon size={20} />
               </div>
               <div>
@@ -245,7 +245,7 @@ export function AudioSetupPage() {
         {step === "microphone" && (
           <div className="flex flex-col gap-6">
             <div className="flex items-start gap-4">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--accent)]/[0.07] text-[var(--accent)] mt-0.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--accent)]/[0.07] text-[var(--accent-text)] mt-0.5">
                 <MicIcon size={20} />
               </div>
               <div>
@@ -300,7 +300,7 @@ export function AudioSetupPage() {
         {step === "output" && (
           <div className="flex flex-col gap-6">
             <div className="flex items-start gap-4">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--accent)]/[0.07] text-[var(--accent)] mt-0.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-[var(--accent)]/[0.07] text-[var(--accent-text)] mt-0.5">
                 <SpeakerIcon size={20} />
               </div>
               <div>

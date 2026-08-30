@@ -236,7 +236,7 @@ function VoiceAudioSettings() {
       {/* Permission banner */}
       {needsPermission && (
         <div className="mb-6 flex items-start gap-3 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--accent)]/8 border border-[var(--accent)]/20">
-          <svg className="text-[var(--accent)] shrink-0 mt-0.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <svg className="text-[var(--accent-text)] shrink-0 mt-0.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
             <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
             <line x1="12" y1="19" x2="12" y2="23"/>
@@ -347,7 +347,7 @@ function AppearanceSettings({ theme, onThemeChange }: { theme: Theme; onThemeCha
             <button
               key={t}
               onClick={() => onThemeChange(t)}
-              className={`qp-interactive px-3 py-1.5 text-[12px] rounded-[var(--radius-md)] border capitalize ${theme === t ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent)]/10 font-medium" : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]"}`}
+              className={`qp-interactive px-3 py-1.5 text-[12px] rounded-[var(--radius-md)] border capitalize ${theme === t ? "border-[var(--accent)] text-[var(--accent-text)] bg-[var(--accent)]/10 font-medium" : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]"}`}
             >
               {t}
             </button>
@@ -358,7 +358,7 @@ function AppearanceSettings({ theme, onThemeChange }: { theme: Theme; onThemeCha
         <SettingRow label="UI density" description="Controls spacing and padding throughout the interface">
           <div className="flex gap-2">
             {(["comfortable", "compact"] as const).map(d => (
-              <button key={d} onClick={() => setDensity(d)} className={`qp-interactive px-2.5 py-1 text-[12px] rounded-[var(--radius-sm)] border capitalize ${density === d ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--accent)]/10" : "border-[var(--border-subtle)] text-[var(--text-secondary)]"}`}>{d}</button>
+              <button key={d} onClick={() => setDensity(d)} className={`qp-interactive px-2.5 py-1 text-[12px] rounded-[var(--radius-sm)] border capitalize ${density === d ? "border-[var(--accent)] text-[var(--accent-text)] bg-[var(--accent)]/10" : "border-[var(--border-subtle)] text-[var(--text-secondary)]"}`}>{d}</button>
             ))}
           </div>
         </SettingRow>

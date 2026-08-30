@@ -79,7 +79,7 @@ export function CommunityRail({ view, onNavigate, inVoiceRoomId }: CommunityRail
             <button
               aria-label="Create community"
               onClick={() => setCreateOpen(true)}
-              className="qp-interactive flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border border-dashed border-[var(--border-strong)] text-[var(--text-tertiary)] hover:border-[var(--accent)]/55 hover:bg-[var(--accent)]/[0.045] hover:text-[var(--accent)]"
+              className="qp-interactive flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] border border-dashed border-[var(--border-strong)] text-[var(--text-tertiary)] hover:border-[var(--accent)]/55 hover:bg-[var(--accent)]/[0.045] hover:text-[var(--accent-text)]"
             >
               <Plus size={15} />
             </button>
